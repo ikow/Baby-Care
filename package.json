@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:frontend": "playwright test frontend.test.js --headed",
+    "test:frontend:debug": "playwright test frontend.test.js --debug",
+    "pretest:frontend:setup": "npm install",
+    "test:frontend:setup": "node tests/cleanup.js && cross-env NODE_ENV=test node tests/testSetup.js && npm run test:frontend",
+    "posttest:frontend:setup": "node tests/cleanup.js",
+    "pretest:frontend": "cd backend && node ../tests/cleanup.js && cd ..",
+    "test:backend": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/baby_care_test playwright test backend.test.js",
+    "test:backend:debug": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/baby_care_test playwright test backend.test.js --debug",
+    "pretest:backend": "node tests/cleanup.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "cross-env": "^7.0.3",
+    "mongoose": "^8.9.5",
+    "playwright": "^1.49.1",
+    "wait-on": "^7.2.0"
+  }
+}

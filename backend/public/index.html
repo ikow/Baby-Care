@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baby Care Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1b1e;
+            --bg-secondary: #2a2b2f;
+            --bg-tertiary: #32333a;
+            --accent-primary: #64ffda;
+            --accent-secondary: #bb86fc;
+            --accent-warning: #ffb74d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --success: #00e676;
+            --danger: #ff5252;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--bg-secondary);
+            padding: 2rem 1rem;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease;
+            position: relative;
+            width: 250px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            overflow: visible;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            height: 60px;
+            width: 100%;
+        }
+
+        /* Logo icon styles */
+        .sidebar-logo i {
+            font-size: 2rem;
+            color: var(--accent-primary);
+            width: 32px;
+            text-align: center;
+            min-width: 32px; /* Prevent icon from shrinking */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 1rem;
+            right: -14px;
+            background: var(--accent-primary);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1), 2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--accent-secondary);
+            transform: scale(1.1);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+        }
+
+        /* Ensure logo stays centered when collapsed */
+        .sidebar.collapsed .sidebar-logo {
+            justify-content: center;
+            padding: 0 0.5rem 2rem 0.5rem;
+            width: 100%;
+        }
+
+        .sidebar.collapsed .sidebar-logo i {
+            margin: 0 auto;
+            min-width: 32px;
+        }
+
+        /* Prevent logo text from affecting layout when hidden */
+        .sidebar.collapsed .sidebar-logo h2 {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Nav items transition */
+        .nav-item span {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 1;
+            transform: translateX(0);
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+            transform: translateX(-20px);
+            position: absolute;
+            left: 100%;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 1rem 0;
+            transition: padding 0.3s ease;
+            width: auto;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 100vh;
+            position: relative;
+        }
+
+        .date-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            min-height: 80px;
+        }
+
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: nowrap;
+        }
+
+        .date-nav-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: max-content;
+            justify-content: center;
+            white-space: nowrap;
+            font-size: 0.875rem;
+        }
+
+        .date-nav-btn.today-btn {
+            padding: 0.75rem 1.25rem;
+            font-weight: 500;
+        }
+
+        .date-nav-btn:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .date-nav-btn i {
+            font-size: 1rem;
+        }
+
+        #selectedDate {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        #selectedDate::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 2rem;
+        }
+
+        .records-section, .form-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.5rem;
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-align: left;
+            padding: 1rem;
+            font-size: 0.875rem;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        td {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        tr {
+            transition: transform 0.3s ease;
+        }
+
+        tr:hover {
+            transform: translateX(5px);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-formula {
+            background: linear-gradient(45deg, #2196f3, #4dabf5);
+            color: white;
+        }
+
+        .status-breastfeeding {
+            background: linear-gradient(45deg, #9c27b0, #ba68c8);
+            color: white;
+        }
+
+        .status-diaper {
+            background: linear-gradient(45deg, #4caf50, #81c784);
+            color: white;
+        }
+
+        /* Form Styles */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: start;
+        }
+
+        /* Date and Time input styles */
+        .form-group.date-time-input {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .form-group.date-time-input input {
+            width: 100%;
+            min-width: 120px;
+            height: 32px;
+        }
+
+        input[type="date"],
+        input[type="time"] {
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            height: 32px;
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .form-control {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            max-width: 100%;
+            box-sizing: border-box;
+            height: 42px;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0a0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11l-4-4h8l-4 4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+            margin-top: 1.5rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.2);
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .delete-btn {
+            background: var(--danger);
+        }
+
+        .edit-btn {
+            background: var(--accent-warning);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 80px 1fr;
+            }
+
+            .sidebar-logo h2, .nav-item span {
+                display: none;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Add or update these styles in your style section */
+        .btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+        }
+
+        .btn i {
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
+            color: var(--bg-primary);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, var(--accent-warning), #ffa726);
+            color: var(--bg-primary);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger), #ff1744);
+            color: white;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+            margin-top: 1.5rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-buttons button {
+            padding: 0.5rem;
+            border-radius: 6px;
+            min-width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .checkbox-cell {
+            width: 48px;
+            text-align: center;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent-primary);
+        }
+
+        /* Update table styles */
+        th {
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        /* Edit mode styles */
+        .edit-mode td {
+            padding: 0.5rem;
+        }
+
+        .edit-mode input, 
+        .edit-mode select {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .edit-mode .action-buttons {
+            justify-content: flex-end;
+        }
+
+        /* Add or update notification styles */
+        .alert {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease-out;
+            max-width: 90vw;
+            word-break: break-word;
+            z-index: 1000;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .alert-success {
+            background: linear-gradient(45deg, var(--success), #66ffa6);
+            color: var(--bg-primary);
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-error {
+            background: linear-gradient(45deg, var(--danger), #ff6666);
+            color: var(--bg-primary);
+            border-left: 4px solid var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Notes column can wrap */
+        td.notes-cell {
+            white-space: normal;
+            word-break: break-word;
+            min-width: 150px;
+            max-width: 300px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .date-selector {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            td, th {
+                max-width: 150px;
+            }
+        }
+
+        /* Add styles for the test button */
+        .test-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Date and time input styles */
+        .datetime-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .date-time-input {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        /* Base styles for both date and time inputs */
+        .date-time-input input {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            height: 40px;
+            box-sizing: border-box;
+            width: 100%;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Calendar and clock icons */
+        .date-time-input input[type="date"]::-webkit-calendar-picker-indicator,
+        .date-time-input input[type="time"]::-webkit-calendar-picker-indicator {
+            background: none;
+            cursor: pointer;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            filter: invert(1);
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Firefox specific styles */
+        @-moz-document url-prefix() {
+            .date-time-input input[type="date"],
+            .date-time-input input[type="time"] {
+                padding-right: 30px;
+            }
+        }
+
+        /* Notification container styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 90vw;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease-out;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="sidebar-logo">
+                <i class="fas fa-baby"></i>
+                <h2>Baby Care</h2>
+            </div>
+            <nav>
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Statistics</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="date-selector">
+                <div class="date-navigation">
+                    <button class="date-nav-btn prev-day-btn" onclick="navigateDate('prev')">
+                        <i class="fas fa-chevron-left"></i>
+                        Previous Day
+                    </button>
+                    <div class="date-input-container">
+                        <input type="date" 
+                            id="selectedDate" 
+                            class="form-control"
+                            onchange="handleDateChange(this.value)"
+                            value="">
+                    </div>
+                    <div id="currentDateDisplay" class="current-date">
+                        <!-- Date will be inserted here by JavaScript -->
+                    </div>
+                    <button class="date-nav-btn today-btn" onclick="navigateDate('today')">
+                        <i class="fas fa-calendar-day"></i>
+                        Today
+                    </button>
+                    <button class="date-nav-btn next-day-btn" onclick="navigateDate('next')">
+                        Next Day
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="records-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Care Records</h2>
+                        <button class="btn btn-danger" onclick="deleteSelected()">
+                            <i class="fas fa-trash"></i> Delete Selected
+                        </button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input type="checkbox" onclick="toggleAllCheckboxes(this)">
+                                </th>
+                                <th class="time-cell">Time</th>
+                                <th class="type-cell">Care Type</th>
+                                <th class="details-cell">Details</th>
+                                <th class="notes-cell">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="careList">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Add New Record</h2>
+                    </div>
+                    <form id="careForm" class="care-form">
+                        <div class="datetime-container">
+                            <div class="form-group date-time-input">
+                                <label for="recordDate">Date</label>
+                                <input type="date" id="recordDate" class="form-control" required>
+                            </div>
+                            <div class="form-group date-time-input">
+                                <label for="recordTime">Time</label>
+                                <input type="time" id="recordTime" class="form-control" required pattern="[0-9]{2}:[0-9]{2}" step="60">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="careType">Care Type</label>
+                            <select id="careType" class="form-control" required onchange="updateFormFields()">
+                                <option value="">Select care type</option>
+                                <option value="formula">Formula Feeding</option>
+                                <option value="breastfeeding">Breastfeeding</option>
+                                <option value="diaper">Diaper Change</option>
+                            </select>
+                        </div>
+                        <div id="volumeGroup" class="form-group" style="display: none;">
+                            <label for="volume">Volume (ml)</label>
+                            <input type="number" id="volume" class="form-control" min="0">
+                        </div>
+                        <div id="durationGroup" class="form-group" style="display: none;">
+                            <label for="duration">Duration (minutes)</label>
+                            <input type="number" id="duration" class="form-control" min="0">
+                        </div>
+                        <div id="diaperTypeGroup" class="form-group" style="display: none;">
+                            <label for="diaperType">Diaper Type</label>
+                            <select id="diaperType" class="form-control">
+                                <option value="pee">Pee</option>
+                                <option value="poo">Poo</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea id="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-plus"></i> Add Record
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add timezone and date format constants
+        const TIME_ZONE = 'America/Los_Angeles';
+        const TIME_FORMAT_OPTIONS = {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: TIME_ZONE
+        };
+
+        const DATE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIME_ZONE,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+
+        const DATE_FORMAT_OPTIONS = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: TIME_ZONE
+        };
+
+        // Add this helper function for logging
+        function logToConsole(level, message, data = {}) {
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                level,
+                message,
+                data
+            };
+
+            switch (level) {
+                case 'error':
+                    console.error(JSON.stringify(logEntry, null, 2));
+                    break;
+                case 'warn':
+                    console.warn(JSON.stringify(logEntry, null, 2));
+                    break;
+                case 'info':
+                default:
+                    console.log(JSON.stringify(logEntry, null, 2));
+            }
+        }
+
+        // Add this helper function for data cleaning
+        function cleanData(str) {
+            if (!str) return '';
+            return String(str)
+                .trim()
+                .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+                .replace(/\.\.\./g, ''); // Remove any ellipsis
+        }
+
+        let allDates = new Set();
+        let currentDate = new Date().getFullYear() + '-' + 
+            String(new Date().getMonth() + 1).padStart(2, '0') + '-' + 
+            String(new Date().getDate()).padStart(2, '0');
+        let selectedRecords = new Set();
+        
+        // Initialize the app
+        async function initializeApp() {
+            try {
+                // Check server health first
+                const isHealthy = await checkServerHealth();
+                if (!isHealthy) {
+                    throw new Error('Server is not ready');
+                }
+
+                // Initialize global variable with timezone consideration
+                const today = new Date();
+                window.currentDate = today.toLocaleDateString('en-CA'); // Use en-CA for YYYY-MM-DD format
+
+                // Initialize date/time inputs
+                initializeDateTimeInputs();
+                
+                // Update date display immediately
+                updateDateDisplay();
+                
+                // Load initial records
+                await loadCareRecords();
+                
+                // Set up form field visibility
+                updateFormFields();
+                
+                logToConsole('info', 'App initialized successfully');
+            } catch (error) {
+                logToConsole('error', 'App initialization failed', { error: error.message });
+                showNotification('Failed to initialize application: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await initializeApp();
+                
+                // Set up auto-refresh of time in PST
+                setInterval(() => {
+                    const now = new Date();
+                    const pstTime = new Date(now.toLocaleString("en-US", {
+                        timeZone: "America/Los_Angeles"
+                    }));
+                    const time = pstTime.toLocaleTimeString('en-GB', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    });
+                    const recordTimeInput = document.getElementById('recordTime');
+                    if (recordTimeInput) {
+                        recordTimeInput.value = time;
+                    }
+                }, 60000); // Update every minute
+                
+                // Restore sidebar state
+                const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (sidebarCollapsed) {
+                    document.querySelector('.sidebar').classList.add('collapsed');
+                }
+            } catch (error) {
+                logToConsole('error', 'Failed to initialize app', { error: error.message });
+                showNotification('Failed to initialize app: ' + error.message, 'error');
+            }
+        });
+
+        function initializeDateTimeInputs() {
+            try {
+                // Get current date in PST
+                const now = new Date().toLocaleString('en-US', { timeZone: TIME_ZONE });
+                const pstDate = new Date(now);
+                
+                // Format date as YYYY-MM-DD
+                const date = pstDate.toLocaleDateString('en-CA'); // Use en-CA for YYYY-MM-DD format
+                const time = DATE_TIME_FORMAT.format(pstDate).split(', ')[1];
+                
+                // Set form values
+                const recordDateInput = document.getElementById('recordDate');
+                const recordTimeInput = document.getElementById('recordTime');
+                const selectedDateInput = document.getElementById('selectedDate');
+                
+                if (!recordDateInput || !recordTimeInput || !selectedDateInput) {
+                    throw new Error('Required form elements not found');
+                }
+                
+                // Set max date to today to prevent future date selection
+                const maxDate = new Date().toLocaleDateString('en-CA');
+                selectedDateInput.max = maxDate;
+                recordDateInput.max = maxDate;
+                
+                recordDateInput.value = date;
+                recordTimeInput.value = time;
+                selectedDateInput.value = date;
+                window.currentDate = date;
+                
+                updateDateDisplay();
+                
+                logToConsole('info', 'Date and time inputs initialized', { 
+                    date, 
+                    time,
+                    timezone: TIME_ZONE,
+                    localizedTime: pstDate.toLocaleString('en-US', {
+                        timeZone: TIME_ZONE,
+                        ...TIME_FORMAT_OPTIONS
+                    })
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to initialize date/time inputs', { error: error.message });
+                throw error;
+            }
+        }
+
+        function updateDateDisplay() {
+            try {
+                // Create date object from current date
+                const selectedDate = new Date(window.currentDate + 'T00:00:00');
+                if (isNaN(selectedDate.getTime())) {
+                    throw new Error('Invalid date');
+                }
+
+                // Format the date string with timezone
+                const displayDate = selectedDate.toLocaleDateString('en-US', DATE_FORMAT_OPTIONS);
+                
+                // Update the header display
+                const displayElement = document.getElementById('currentDateDisplay');
+                if (displayElement) {
+                    displayElement.textContent = displayDate;
+                }
+                
+                // Update date inputs
+                const selectedDateInput = document.getElementById('selectedDate');
+                const recordDateInput = document.getElementById('recordDate');
+                
+                if (selectedDateInput) {
+                    selectedDateInput.value = window.currentDate;
+                }
+                if (recordDateInput) {
+                    recordDateInput.value = window.currentDate;
+                }
+                
+                logToConsole('info', 'Date display updated successfully', {
+                    currentDate: window.currentDate,
+                    displayDate
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to update date display', { error: error.message });
+                showNotification('Error updating date display', 'error');
+            }
+        }
+
+        async function navigateDate(direction) {
+            try {
+                const currentSelectedDate = new Date(window.currentDate + 'T00:00:00');
+                if (isNaN(currentSelectedDate.getTime())) {
+                    throw new Error('Invalid current date');
+                }
+
+                // Get today's date at midnight for comparison
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let newDate;
+                switch (direction) {
+                    case 'prev':
+                        newDate = new Date(currentSelectedDate);
+                        newDate.setDate(currentSelectedDate.getDate() - 1);
+                        break;
+                    case 'next':
+                        newDate = new Date(currentSelectedDate);
+                        newDate.setDate(currentSelectedDate.getDate() + 1);
+                        if (newDate > today) {
+                            showNotification('Cannot navigate to future dates', 'warning');
+                            return;
+                        }
+                        break;
+                    case 'today':
+                        newDate = today;
+                        break;
+                    default:
+                        throw new Error('Invalid navigation direction');
+                }
+
+                // Update current date in YYYY-MM-DD format
+                window.currentDate = newDate.toLocaleDateString('en-CA');
+                
+                // Update display and load new records
+                updateDateDisplay();
+                await loadCareRecords();
+                
+                logToConsole('info', 'Date navigation successful', {
+                    direction,
+                    newDate: window.currentDate
+                });
+            } catch (error) {
+                logToConsole('error', 'Date navigation failed', { error: error.message });
+                showNotification('Error navigating date: ' + error.message, 'error');
+            }
+        }
+
+        // Helper function to sort records by time
+        function sortRecordsByTime(records) {
+            return records.sort((a, b) => {
+                const timeA = new Date(a.timestamp).getTime();
+                const timeB = new Date(b.timestamp).getTime();
+                return timeA - timeB; // ascending order (earlier times first)
+            });
+        }
+
+        async function loadCareRecords() {
+            try {
+                const date = window.currentDate;
+                logToConsole('info', 'Loading records for date', { date });
+
+                const response = await fetch(`/api/feeding/baby/507f1f77bcf86cd799439011?date=${date}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load records');
+                }
+
+                const records = await response.json();
+                // Convert timestamps to Date objects and sort
+                const sortedRecords = records
+                    .map(record => ({
+                        ...record,
+                        parsedTime: new Date(record.timestamp).getTime()
+                    }))
+                    .sort((a, b) => a.parsedTime - b.parsedTime)
+                    .map(({ parsedTime, ...record }) => record);
+
+                logToConsole('info', 'Records sorted by time', {
+                    recordCount: sortedRecords.length,
+                    times: sortedRecords.map(r => new Date(r.timestamp).toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }))
+                });
+
+                updateCareList(sortedRecords);
+            } catch (error) {
+                logToConsole('error', 'Failed to load records', { error: error.message });
+                showNotification('Failed to load records: ' + error.message, 'error');
+            }
+        }
+
+        function updateCareList(records) {
+            const careList = document.getElementById('careList');
+            
+            // Show loading state
+            careList.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
+                        Loading...
+                    </td>
+                </tr>
+            `;
+
+            try {
+                if (!records || records.length === 0) {
+                    careList.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">
+                                No records found for this date
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // Create rows with timestamp data for verification
+                careList.innerHTML = records
+                    .map(record => {
+                        const timestamp = new Date(record.timestamp);
+                        return createRecordRow(record, timestamp);
+                    })
+                    .join('');
+
+                logToConsole('info', 'Care list updated', { 
+                    recordCount: records.length,
+                    firstRecord: records[0]?.timestamp,
+                    lastRecord: records[records.length - 1]?.timestamp,
+                    sortOrder: 'ascending',
+                    timestamps: records.map(r => new Date(r.timestamp).toLocaleTimeString('en-GB'))
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to update care list', { error: error.message });
+                careList.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">
+                            Error updating records: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function createRecordRow(record, timestamp) {
+            // Parse the timestamp and format it in PST
+            const date = new Date(record.timestamp);
+            const formattedTime = DATE_TIME_FORMAT.format(date).split(', ')[1];
+
+            // Get record details based on type
+            let details = '';
+            switch(record.type) {
+                case 'formula':
+                    details = `${record.volume} ml`;
+                    break;
+                case 'breastfeeding':
+                    details = `${record.duration} min`;
+                    break;
+                case 'diaper':
+                    details = record.diaperType;
+                    break;
+            }
+
+            return `
+                <tr data-id="${record._id}" data-timestamp="${timestamp.getTime()}">
+                    <td class="checkbox-cell">
+                        <input type="checkbox" onchange="toggleRecordSelection('${record._id}')">
+                    </td>
+                    <td class="time-cell">${formattedTime}</td>
+                    <td class="type-cell">${record.type}</td>
+                    <td class="details-cell">${details}</td>
+                    <td class="notes-cell">${record.notes || ''}</td>
+                </tr>
+            `;
+        }
+
+        // Call initializeApp when the document is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+
+        // Add these functions after createRecordRow
+        function toggleRecordSelection(recordId) {
+            const checkbox = event.target;
+            if (checkbox.checked) {
+                selectedRecords.add(recordId);
+            } else {
+                selectedRecords.delete(recordId);
+            }
+            logToConsole('info', 'Record selection toggled', { recordId, selected: checkbox.checked });
+        }
+
+        function toggleAllCheckboxes(mainCheckbox) {
+            const checkboxes = document.querySelectorAll('#careList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = mainCheckbox.checked;
+                const recordId = checkbox.closest('tr').dataset.id;
+                if (mainCheckbox.checked) {
+                    selectedRecords.add(recordId);
+                } else {
+                    selectedRecords.delete(recordId);
+                }
+            });
+            logToConsole('info', 'All records selection toggled', { selected: mainCheckbox.checked });
+        }
+
+        async function deleteSelected() {
+            if (selectedRecords.size === 0) {
+                showNotification('No records selected', 'error');
+                return;
+            }
+
+            try {
+                const confirmed = window.confirm('Are you sure you want to delete the selected records?');
+                
+                if (!confirmed) return;
+
+                const response = await fetch('/api/feeding/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: Array.from(selectedRecords) })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete records');
+                }
+
+                showNotification('Records deleted successfully', 'success');
+                selectedRecords.clear();
+                // Deselect all checkboxes including the header checkbox
+                const headerCheckbox = document.querySelector('thead input[type="checkbox"]');
+                if (headerCheckbox) {
+                    headerCheckbox.checked = false;
+                }
+                const recordCheckboxes = document.querySelectorAll('#careList input[type="checkbox"]');
+                recordCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                await loadCareRecords();
+                
+                logToConsole('info', 'Records deleted and checkboxes cleared', {
+                    deletedCount: selectedRecords.size,
+                    checkboxesCleared: true
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to delete records', { error: error.message });
+                showNotification('Failed to delete records: ' + error.message, 'error');
+            }
+        }
+
+        // Update form submission handler
+        document.getElementById('careForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const careType = document.getElementById('careType').value;
+                if (!careType) {
+                    throw new Error('Please select a care type');
+                }
+
+                // Get date and time values
+                const recordDate = document.getElementById('recordDate').value;
+                const recordTime = document.getElementById('recordTime').value;
+
+                // Validate date and time
+                if (!recordDate || !recordTime) {
+                    throw new Error('Date and time are required');
+                }
+
+                // Create timestamp in PST
+                const inputTimestamp = new Date(`${recordDate}T${recordTime}`);
+                const pstTimestamp = new Date(inputTimestamp.toLocaleString('en-US', {
+                    timeZone: TIME_ZONE
+                }));
+
+                if (isNaN(pstTimestamp.getTime())) {
+                    throw new Error('Invalid date or time');
+                }
+
+                // Prevent future dates
+                const now = new Date();
+                const nowPST = new Date(now.toLocaleString('en-US', { timeZone: TIME_ZONE }));
+                if (inputTimestamp > now) {
+                    throw new Error('Cannot create records for future times');
+                }
+
+                const formData = {
+                    timestamp: inputTimestamp.toISOString(),
+                    type: careType,
+                    notes: document.getElementById('notes').value,
+                    babyId: '507f1f77bcf86cd799439011'
+                };
+
+                // Add specific fields based on care type
+                switch(formData.type) {
+                    case 'formula':
+                        const volume = parseInt(document.getElementById('volume').value);
+                        if (isNaN(volume) || volume <= 0) {
+                            throw new Error('Please enter a valid volume');
+                        }
+                        formData.volume = volume;
+                        break;
+                    case 'breastfeeding':
+                        const duration = parseInt(document.getElementById('duration').value);
+                        if (isNaN(duration) || duration <= 0) {
+                            throw new Error('Please enter a valid duration');
+                        }
+                        formData.duration = duration;
+                        break;
+                    case 'diaper':
+                        const diaperType = document.getElementById('diaperType').value;
+                        if (!diaperType) {
+                            throw new Error('Please select a diaper type');
+                        }
+                        formData.diaperType = diaperType;
+                        break;
+                }
+
+                logToConsole('info', 'Submitting form data', { formData });
+
+                const response = await fetch('/api/feeding', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to add record');
+                }
+
+                const responseData = await response.json();
+                showNotification('Record added successfully', 'success');
+                
+                // Reset form but keep the current date
+                const currentFormDate = document.getElementById('recordDate').value;
+                this.reset();
+                initializeDateTimeInputs();
+                // Set the form date back to the date of the submitted record
+                document.getElementById('recordDate').value = recordDate;
+                // Keep the selected date in the date picker
+                document.getElementById('selectedDate').value = recordDate;
+                window.currentDate = recordDate;
+                updateFormFields();
+                updateDateDisplay();
+                await loadCareRecords();
+
+                logToConsole('info', 'Record added successfully', { 
+                    record: responseData,
+                    stayingOnDate: recordDate
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to add record', { error: error.message });
+                showNotification('Failed to add record: ' + error.message, 'error');
+            }
+        });
+
+        function updateFormFields() {
+            const careType = document.getElementById('careType').value;
+            const volumeGroup = document.getElementById('volumeGroup');
+            const durationGroup = document.getElementById('durationGroup');
+            const diaperTypeGroup = document.getElementById('diaperTypeGroup');
+            
+            // Hide all fields first
+            volumeGroup.style.display = 'none';
+            durationGroup.style.display = 'none';
+            diaperTypeGroup.style.display = 'none';
+            
+            // Show relevant fields based on care type
+            switch(careType) {
+                case 'formula':
+                    volumeGroup.style.display = 'block';
+                    document.getElementById('volume').required = true;
+                    document.getElementById('duration').required = false;
+                    document.getElementById('diaperType').required = false;
+                    break;
+                case 'breastfeeding':
+                    durationGroup.style.display = 'block';
+                    document.getElementById('volume').required = false;
+                    document.getElementById('duration').required = true;
+                    document.getElementById('diaperType').required = false;
+                    break;
+                case 'diaper':
+                    diaperTypeGroup.style.display = 'block';
+                    document.getElementById('volume').required = false;
+                    document.getElementById('duration').required = false;
+                    document.getElementById('diaperType').required = true;
+                    break;
+            }
+
+            // Reset values of hidden fields
+            if (volumeGroup.style.display === 'none') {
+                document.getElementById('volume').value = '';
+            }
+            if (durationGroup.style.display === 'none') {
+                document.getElementById('duration').value = '';
+            }
+            if (diaperTypeGroup.style.display === 'none') {
+                document.getElementById('diaperType').value = 'pee';
+            }
+
+            logToConsole('info', 'Form fields updated', { careType });
+        }
+
+        function showNotification(message, type = 'success') {
+            // Create container if it doesn't exist
+            let container = document.querySelector('.notification-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'notification-container';
+                document.body.appendChild(container);
+            }
+
+            // Remove any existing notifications
+            const existingNotifications = document.querySelectorAll('.notification-container .alert');
+            existingNotifications.forEach(notification => {
+                notification.remove();
+            });
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.innerHTML = `
+                <span>${message}</span>
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Add fade out animation
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => {
+                    notification.remove();
+                    // Remove container if empty
+                    if (container.children.length === 0) {
+                        container.remove();
+                    }
+                }, 300);
+            }, 3000);
+
+            // Log notification
+            logToConsole('info', 'Showing notification', { message, type });
+        }
+
+        // Add this function after showNotification
+        async function checkServerHealth() {
+            try {
+                const response = await fetch('/health');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Health check failed');
+                }
+                
+                const data = await response.json();
+                logToConsole('info', 'Health check response', data);
+                
+                if (data.status !== 'ok' || data.mongodb !== 'connected') {
+                    throw new Error(`Server health check failed: ${JSON.stringify(data)}`);
+                }
+                return true;
+            } catch (error) {
+                logToConsole('error', 'Health check failed', { error: error.message });
+                showNotification('Server connection error: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Add this function before the existing script
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        // Add global error handler
+        window.onerror = function(msg, url, line, col, error) {
+            logToConsole('error', 'Global error caught', {
+                message: msg,
+                url: url,
+                line: line,
+                column: col,
+                error: error?.message
+            });
+            showNotification('An error occurred: ' + error?.message, 'error');
+            return false;
+        };
+
+        async function handleDateChange(newDate) {
+            try {
+                // Get current date for comparison
+                const today = new Date().toLocaleDateString('en-CA');
+                
+                // Check if selected date is in the future
+                if (newDate > today) {
+                    showNotification('Cannot select future dates', 'warning');
+                    // Reset to today's date
+                    newDate = today;
+                }
+
+                // Parse the selected date
+                const selectedDate = new Date(newDate + 'T00:00:00').toLocaleString('en-US', {
+                    timeZone: TIME_ZONE
+                });
+                if (isNaN(selectedDate.getTime())) {
+                    throw new Error('Invalid date selected');
+                }
+
+                // Format date consistently
+                window.currentDate = newDate;
+                document.getElementById('recordDate').value = newDate;
+                document.getElementById('selectedDate').value = newDate;
+
+                // Update display with the same date
+                updateDateDisplay();
+                await loadCareRecords();
+
+                logToConsole('info', 'Date changed', { 
+                    newDate,
+                    selectedDate,
+                    currentDate: window.currentDate,
+                    timezone: TIME_ZONE
+                });
+            } catch (error) {
+                logToConsole('error', 'Failed to handle date change', { error: error.message });
+                showNotification('Failed to change date: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
