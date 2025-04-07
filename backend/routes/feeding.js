@@ -36,6 +36,52 @@ router.get('/baby/:babyId', async (req, res) => {
   }
 });
 
+// Get feedings for a baby within a date range and optionally filtered by type
+router.get('/baby/:babyId/range', async (req, res) => {
+  try {
+    const { startDate, endDate, type } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'Start date and end date are required' });
+    }
+    
+    let query = { 
+      babyId: req.params.babyId,
+      isDeleted: { $ne: true }
+    };
+    
+    // Add type filter if provided
+    if (type) {
+      query.type = type;
+    }
+    
+    // Create start and end timestamps in local timezone
+    const startTimestamp = createLocalTimestamp(startDate, '00:00');
+    const endTimestamp = createLocalTimestamp(endDate, '23:59');
+    
+    query.timestamp = {
+      $gte: startTimestamp,
+      $lte: endTimestamp
+    };
+
+    logger.info('Date range query parameters', { 
+      startDate, 
+      endDate, 
+      type, 
+      startTimestamp, 
+      endTimestamp 
+    });
+
+    const feedings = await Feeding.find(query)
+      .sort({ timestamp: 1 });
+
+    res.json(feedings);
+  } catch (error) {
+    logger.error('Error fetching feedings by date range', { error });
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Add new feeding with custom timestamp
 router.post('/', async (req, res) => {
   try {

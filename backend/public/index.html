@@ -4,9 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Baby Care Dashboard</title>
+    <!-- Add this script before any other scripts or styles -->
+    <script>
+        // Immediately apply theme, language, and sidebar state before page renders
+        (function() {
+            // Hide content until everything is initialized
+            document.documentElement.style.visibility = 'hidden';
+            
+            // Apply theme
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Apply language
+            const language = localStorage.getItem('language') || 'en';
+            document.documentElement.setAttribute('lang', language);
+            
+            // Add a class to prevent transitions during page load
+            document.documentElement.classList.add('no-transitions');
+
+            // Load translations synchronously
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/js/i18n/translations.js', false); // false makes it synchronous
+            xhr.send();
+            if (xhr.status === 200) {
+                eval(xhr.responseText);
+                // Initialize i18n immediately
+                if (typeof i18n !== 'undefined') {
+                    i18n.currentLocale = language;
+                }
+            }
+            
+            // Show content after a small delay to ensure everything is ready
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    document.documentElement.classList.remove('no-transitions');
+                    document.documentElement.style.visibility = 'visible';
+                }, 50);
+            });
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/js/i18n/translations.js"></script>
+    <!-- Add sidebar JS -->
+    <script src="/js/sidebar.js"></script>
+    <!-- Add sidebar CSS -->
+    <link href="/css/sidebar.css" rel="stylesheet">
     <style>
+        /* Add this at the top of your styles */
+        .no-transitions * {
+            transition: none !important;
+        }
+
         /* Theme Variables */
         :root[data-theme="dark"] {
             --bg-primary: #1a1b1e;
@@ -58,6 +107,9 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         .dashboard-container {
@@ -229,37 +281,41 @@
 
         /* Main Content Styles */
         .main-content {
-            padding: 2rem;
+            padding: 1rem;
             overflow-y: auto;
             max-height: 100vh;
-            position: relative;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .date-selector {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem 2rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
             background: var(--bg-secondary);
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow-x: auto;
-            min-height: 80px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 60px;
         }
 
         .date-navigation {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            flex-wrap: nowrap;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: space-between;
         }
 
         .date-nav-btn {
             background: var(--bg-tertiary);
             border: none;
             color: var(--text-primary);
-            padding: 0.75rem 1rem;
+            padding: 0.5rem 0.75rem;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease,
@@ -269,10 +325,10 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            min-width: max-content;
-            justify-content: center;
             white-space: nowrap;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
+            min-width: auto;
+            flex-shrink: 0;
         }
 
         .date-nav-btn.today-btn {
@@ -290,35 +346,175 @@
             font-size: 1rem;
         }
 
+        .date-input-container {
+            position: relative;
+            min-width: 120px;
+            max-width: 150px;
+            flex-shrink: 0;
+        }
+
         #selectedDate {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
-            padding: 0.75rem;
+            padding: 0.75rem 2.5rem 0.75rem 0.75rem;
             border-radius: 8px;
             font-family: 'Poppins', sans-serif;
             cursor: pointer;
-            min-width: 150px;
+            width: 100%;
+            height: 42px;
+            box-sizing: border-box;
+            font-size: 0.875rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        #selectedDate:hover {
+            border-color: var(--accent-primary);
+        }
+
+        #selectedDate:focus {
+            border-color: var(--accent-primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
         }
 
         #selectedDate::-webkit-calendar-picker-indicator {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
             filter: invert(1);
             cursor: pointer;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            margin: 0;
+            opacity: 0.7;
         }
+
+        /* Style for the native date/time picker popup (where supported) */
+        ::-webkit-datetime-edit {
+            color: var(--text-primary);
+            padding: 0;
+        }
+
+        ::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+
+        ::-webkit-datetime-edit-text {
+            color: var(--text-secondary);
+            padding: 0 2px;
+        }
+
+        ::-webkit-datetime-edit-month-field,
+        ::-webkit-datetime-edit-day-field,
+        ::-webkit-datetime-edit-year-field,
+        ::-webkit-datetime-edit-hour-field,
+        ::-webkit-datetime-edit-minute-field,
+        ::-webkit-datetime-edit-ampm-field {
+            color: var(--text-primary);
+        }
+
+        ::-webkit-calendar-picker-indicator {
+            background-color: transparent;
+        }
+
+        /* Current date display */
+        /* #currentDateDisplay {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            margin: 0 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        } */
 
         .content-grid {
             display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 2rem;
+            grid-template-columns: 45% 55%;
+            gap: 20px;
+            height: calc(100vh - 120px);
+            overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0;
+        }
+        
+        /* Update grid layout for larger screens */
+        @media (min-width: 992px) {
+            .content-grid {
+                grid-template-columns: 65% 35%;
+            }
+        }
+        
+        /* Update grid layout for mobile */
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                height: auto;
+                overflow-y: visible;
+            }
+            
+            .records-section, .form-section {
+                max-height: none;
+                overflow-y: visible;
+            }
+            
+            .date-navigation {
+                justify-content: center;
+            }
+            
+            table {
+                min-width: auto;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            .checkbox-cell {
+                width: 30px;
+            }
+            
+            .time-cell {
+                width: 60px;
+            }
+            
+            .type-cell {
+                width: 80px;
+            }
+            
+            .date-nav-btn {
+                padding: 0.4rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            .date-nav-btn span {
+                display: none;
+            }
+            
+            .date-nav-btn.today-btn span {
+                display: inline;
+            }
         }
 
         .records-section, .form-section {
             background: var(--bg-secondary);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow-x: auto;
-            max-width: 100%;
+            overflow-y: auto;
+            max-height: 100%;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .section-header {
@@ -341,6 +537,7 @@
             width: 100%;
             border-collapse: separate;
             border-spacing: 0 0.5rem;
+            table-layout: fixed;
         }
 
         th {
@@ -348,9 +545,8 @@
             color: var(--text-secondary);
             font-weight: 500;
             text-align: left;
-            padding: 1rem;
-            font-size: 0.875rem;
-            max-width: 200px;
+            padding: 0.75rem;
+            font-size: 0.8rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -358,10 +554,9 @@
 
         td {
             background: var(--bg-tertiary);
-            padding: 1rem;
+            padding: 0.75rem;
             color: var(--text-primary);
-            font-size: 0.875rem;
-            max-width: 200px;
+            font-size: 0.8rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -465,36 +660,106 @@
 
         select.form-control {
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0a0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11l-4-4h8l-4 4z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364ffda' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 1rem center;
-            padding-right: 2.5rem;
+            background-position: right 15px center;
+            padding-right: 40px;
+            cursor: pointer;
+            background-color: rgba(30, 31, 40, 0.9);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            color: #fff;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        select.form-control:hover {
+            border-color: rgba(100, 255, 218, 0.4);
+        }
+        
+        select.form-control:focus {
+            border-color: #64ffda;
+            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.15);
+            outline: none;
+        }
+        
+        select.form-control option {
+            background-color: #282a36;
+            color: #fff;
+            padding: 10px;
+        }
+        
+        /* Mobile optimizations for select */
+        @media (max-width: 768px) {
+            select.form-control {
+                height: 54px;
+                padding-right: 45px;
+                font-size: 1.05rem;
+                background-size: 16px;
+                background-position: right 18px center;
+            }
         }
 
+        /* Enhanced Textarea Styling */
+        textarea.form-control {
+            height: auto;
+            min-height: 100px;
+            padding: 12px 15px;
+            resize: vertical;
+            line-height: 1.5;
+            background: rgba(30, 31, 40, 0.9);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            border-radius: 12px;
+            color: #fff;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        textarea.form-control:hover {
+            border-color: rgba(100, 255, 218, 0.4);
+        }
+        
+        textarea.form-control:focus {
+            border-color: #64ffda;
+            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.15);
+            outline: none;
+        }
+        
+        /* Mobile optimizations for textarea */
+        @media (max-width: 768px) {
+            textarea.form-control {
+                min-height: 120px;
+                padding: 15px;
+                font-size: 1.05rem;
+                border-radius: 14px;
+            }
+        }
+
+        /* Submit Button */
         .submit-btn {
-            background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
-            color: var(--bg-primary);
-            border: none;
-            padding: 0.75rem;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.3s ease,
-                      background-color 0.3s ease,
-                      color 0.3s ease,
-                      transform 0.3s ease;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(45deg, #64ffda, #4fd1c5);
+            color: #202124;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 10px;
             margin-top: 1.5rem;
+            width: 100%;
+            transition: all 0.2s ease;
+            gap: 10px;
         }
 
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.2);
+        .submit-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .submit-btn i {
+            font-size: 1.2rem;
         }
 
         /* Action Buttons */
@@ -626,7 +891,7 @@
         }
 
         .checkbox-cell {
-            width: 48px;
+            width: 40px;
             text-align: center;
         }
 
@@ -781,50 +1046,9 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
+            position: relative;
         }
         
-        /* Base styles for both date and time inputs */
-        .date-time-input input {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            height: 40px;
-            box-sizing: border-box;
-            width: 100%;
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-        }
-
-        /* Calendar and clock icons */
-        .date-time-input input[type="date"]::-webkit-calendar-picker-indicator,
-        .date-time-input input[type="time"]::-webkit-calendar-picker-indicator {
-            background: none;
-            cursor: pointer;
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            filter: invert(1);
-            width: 20px;
-            height: 20px;
-            padding: 0;
-            margin: 0;
-        }
-        
-        /* Firefox specific styles */
-        @-moz-document url-prefix() {
-            .date-time-input input[type="date"],
-            .date-time-input input[type="time"] {
-                padding-right: 30px;
-            }
-        }
-
         /* Notification container styles */
         .notification-container {
             position: fixed;
@@ -836,111 +1060,427 @@
             gap: 10px;
             max-width: 90vw;
         }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            animation: slideIn 0.3s ease-out;
-            min-width: 300px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* Updated theme switcher styles */
-        .theme-switch {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        
+        /* Add new improved datetime styles */
+        .improved-datetime-container {
+            margin-bottom: 1rem;
             width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .datetime-inputs-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(40, 42, 54, 0.6);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .datetime-input-container {
+            position: relative;
+            flex: 1;
+        }
+        
+        .datetime-input-container .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
             color: var(--text-secondary);
-            border: 1px solid transparent;
+            font-size: 1rem;
+            z-index: 1;
+            pointer-events: none;
         }
-
-        .theme-switch:hover {
+        
+        .datetime-input-container .form-control {
+            padding-left: 40px; /* Make room for icon */
+            width: 100%;
+            height: 42px;
             background: var(--bg-tertiary);
-            color: var(--accent-primary);
-            border-color: var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+        
+        .datetime-input-container .form-control:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        .datetime-input-container .form-control:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
+            outline: none;
+        }
+        
+        /* Custom styles for date and time inputs */
+        .date-input::-webkit-calendar-picker-indicator,
+        .time-input::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: transparent;
+            color: transparent;
+            cursor: pointer;
+        }
+        
+        /* Hide native date/time picker icons */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        /* Make inputs more touch-friendly on mobile */
+        @media (max-width: 768px) {
+            .datetime-inputs-wrapper {
+                flex-direction: column;
+            }
+            
+            .datetime-input-container .form-control {
+                height: 48px; /* Larger touch targets on mobile */
+            }
         }
 
-        .theme-switch i {
-            width: 24px;
+        /* Add mobile optimizations for form section */
+        @media (max-width: 768px) {
+            .form-section {
+                background: rgba(42, 43, 47, 0.95);
+                padding: 1.2rem;
+                border-radius: 16px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                margin-top: 1rem;
+            }
+            
+            .form-section .section-title {
+                font-size: 1.3rem;
+                margin-bottom: 0.5rem;
+                text-align: center;
+                color: var(--accent-primary);
+                font-weight: bold;
+            }
+            
+            .form-section .section-header {
+                border-bottom: none;
+                margin-bottom: 0.8rem;
+                padding-bottom: 0.5rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+            
+            .form-group label {
+                display: block;
+                margin-bottom: 0.4rem;
+                font-weight: 500;
+                color: var(--text-primary);
+            }
+            
+            /* Optimize date/time container */
+            .improved-datetime-container {
+                margin-bottom: 1.2rem;
+            }
+            
+            .datetime-input-container {
+                margin-bottom: 0.8rem;
+            }
+            
+            .datetime-input-container .form-control {
+                height: 52px;
+                font-size: 1rem;
+                border-radius: 12px;
+                padding-left: 45px;
+            }
+            
+            .datetime-input-container .input-icon {
+                left: 15px;
+                font-size: 1.2rem;
+                color: var(--accent-primary);
+            }
+            
+            /* Improve care type select */
+            select.form-control {
+                height: 52px;
+                font-size: 1rem;
+                border-radius: 12px;
+                background-size: 12px;
+                background-position: right 15px center;
+            }
+            
+            /* Improve number inputs */
+            input[type="number"].form-control {
+                height: 52px;
+                font-size: 1rem;
+                border-radius: 12px;
+            }
+            
+            /* Improve textarea */
+            textarea.form-control {
+                min-height: 100px;
+                border-radius: 12px;
+                padding: 12px;
+                font-size: 1rem;
+            }
+            
+            /* Style the sleep duration container */
+            .mobile-friendly-sleep {
+                margin-top: 5px;
+            }
+            
+            .sleep-input {
+                width: 100%;
+            }
+            
+            /* Make submit button more touch-friendly */
+            .submit-btn {
+                height: 56px;
+                font-size: 1.1rem;
+                border-radius: 12px;
+                margin-top: 1.2rem;
+                background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
+                font-weight: bold;
+                box-shadow: 0 4px 12px rgba(100, 255, 218, 0.3);
+            }
+            
+            .submit-btn:active {
+                transform: scale(0.98);
+            }
+        }
+
+        /* Style the sleep duration container */
+        .mobile-friendly-sleep {
+            background: rgba(40, 42, 54, 0.6);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-top: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .sleep-input-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .sleep-input {
+            height: 48px !important;
+            font-size: 1.4rem !important;
+            font-weight: 600 !important;
             text-align: center;
-            font-size: 1.2rem;
-            transition: transform 0.5s ease;
+            background: rgba(30, 31, 40, 0.9) !important;
+            border: 1px solid rgba(100, 255, 218, 0.25) !important;
+            color: #fff !important;
+            border-radius: 10px !important;
+            padding: 0 26px 0 5px !important; /* Add padding for spinner */
+            width: 100%;
+            transition: all 0.2s ease !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .sleep-input-divider {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #64ffda;
+            margin: 0 4px;
+            padding-bottom: 10px;
+            line-height: 1;
+            opacity: 0.9;
+            text-shadow: 0 0 8px rgba(100, 255, 218, 0.3);
+        }
+        
+        /* Enhanced Sleep Input Spinners */
+        input[type="number"].sleep-input::-webkit-inner-spin-button,
+        input[type="number"].sleep-input::-webkit-outer-spin-button {
+            opacity: 1;
+            height: 36px;
+            width: 20px;
+            right: 6px;
+            cursor: pointer;
+            position: absolute;
+            top: 5px;
+            background: linear-gradient(
+                to bottom,
+                rgba(100, 255, 218, 0.15) 0%,
+                rgba(100, 255, 218, 0.3) 100%
+            );
+            border-radius: 0 8px 8px 0;
+            box-shadow: -1px 0 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        input[type="number"].sleep-input:hover::-webkit-inner-spin-button,
+        input[type="number"].sleep-input:hover::-webkit-outer-spin-button {
+            background: linear-gradient(
+                to bottom,
+                rgba(100, 255, 218, 0.3) 0%,
+                rgba(100, 255, 218, 0.5) 100%
+            );
+            box-shadow: -1px 0 5px rgba(100, 255, 218, 0.3);
+            width: 22px;
+        }
+        
+        /* Make sleep inputs slightly smaller with uniform padding */
+        .sleep-input {
+            height: 48px !important;
+            font-size: 1.4rem !important;
+            font-weight: 600 !important;
+            text-align: center;
+            background: rgba(30, 31, 40, 0.9) !important;
+            border: 1px solid rgba(100, 255, 218, 0.25) !important;
+            color: #fff !important;
+            border-radius: 10px !important;
+            padding: 0 26px 0 5px !important; /* Add padding for spinner */
+            width: 100%;
+            transition: all 0.2s ease !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15) !important;
         }
 
-        .theme-switch:hover i {
-            transform: rotate(360deg);
+        .sleep-input-block {
+            position: relative;
+            flex: 1;
+            text-align: center;
         }
-
-        .theme-switch span {
+        
+        .sleep-input:hover {
+            border-color: rgba(100, 255, 218, 0.4) !important;
+        }
+        
+        .sleep-input:focus {
+            border-color: #64ffda !important;
+            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.2) !important;
+            outline: none !important;
+        }
+        
+        .sleep-input-label {
+            display: block;
+            text-align: center;
+            margin-top: 8px;
             font-size: 0.9rem;
+            color: #b3e5fc;
             font-weight: 500;
         }
 
-        /* Update collapsed sidebar styles */
-        .sidebar.collapsed .theme-switch {
-            padding: 1rem 0;
-            justify-content: center;
+        .time-cell {
+            width: 70px;
         }
 
-        .sidebar.collapsed .theme-switch span {
-            display: none;
+        .type-cell {
+            width: 120px;
         }
 
-        .sidebar.collapsed .theme-switch i {
-            margin: 0;
-            width: auto;
+        .details-cell {
+            width: 100px;
         }
 
-        /* Responsive styles */
-        @media (max-width: 1024px) {
-            .theme-switch span {
-                display: none;
+        .notes-cell {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        /* Enhanced Date and Time Icons */
+        .datetime-input-container .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64ffda;
+            font-size: 1.2rem;
+            z-index: 1;
+            text-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+            opacity: 0.85;
+            transition: all 0.2s ease;
+        }
+        
+        .datetime-input-container:hover .input-icon {
+            color: #76ffdf;
+            opacity: 1;
+            text-shadow: 0 0 8px rgba(100, 255, 218, 0.5);
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .date-input:focus + .input-icon,
+        .time-input:focus + .input-icon {
+            color: #7effff;
+            opacity: 1;
+            text-shadow: 0 0 10px rgba(126, 255, 255, 0.6);
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .sleep-input {
+                height: 54px !important;
+                font-size: 1.6rem !important;
+                padding: 0 30px 0 5px !important; /* Slightly bigger padding for mobile */
             }
             
-            .theme-switch {
-                padding: 1rem 0;
-                justify-content: center;
+            .sleep-input-divider {
+                padding-bottom: 15px;
+                font-size: 2rem;
+            }
+            
+            input[type="number"].sleep-input::-webkit-inner-spin-button,
+            input[type="number"].sleep-input::-webkit-outer-spin-button {
+                height: 42px;
+                width: 24px;
+                right: 6px;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Notification container -->
+    <div id="notification-container" class="notification-container"></div>
+    
     <div class="dashboard-container">
         <div class="sidebar">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <button class="sidebar-toggle">
                 <i class="fas fa-chevron-left"></i>
             </button>
             <div class="sidebar-logo">
                 <i class="fas fa-baby"></i>
-                <h2>Baby Care</h2>
+                <h2 data-i18n="baby_care">Baby Care</h2>
             </div>
             <nav>
-                <a href="#" class="nav-item active">
+                <a href="index.html" class="nav-item active">
                     <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
+                    <span data-i18n="nav_dashboard">Dashboard</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="statistics.html" class="nav-item">
                     <i class="fas fa-chart-bar"></i>
-                    <span>Statistics</span>
+                    <span data-i18n="nav_statistics">Statistics</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="sleep-pattern.html" class="nav-item">
+                    <i class="fas fa-moon"></i>
+                    <span data-i18n="nav_sleep_pattern">Sleep Pattern</span>
+                </a>
+                <a href="body-data.html" class="nav-item">
+                    <i class="fas fa-weight"></i>
+                    <span data-i18n="nav_body_data">Body Data</span>
+                </a>
+                <a href="settings.html" class="nav-item">
                     <i class="fas fa-cog"></i>
-                    <span>Settings</span>
+                    <span data-i18n="nav_settings">Settings</span>
                 </a>
             </nav>
-            <!-- Theme switcher moved here and updated -->
-            <div class="theme-switch" onclick="toggleTheme()" title="Toggle theme">
+            <!-- Theme Switch Button -->
+            <div class="theme-switch">
                 <i class="fas fa-moon"></i>
-                <span>Dark mode</span>
+                <span data-i18n="dark_mode">Dark Mode</span>
             </div>
         </div>
 
@@ -950,7 +1490,7 @@
                 <div class="date-navigation">
                     <button class="date-nav-btn prev-day-btn" onclick="navigateDate('prev')">
                         <i class="fas fa-chevron-left"></i>
-                        Previous Day
+                        <span data-i18n="previous_day">Previous Day</span>
                     </button>
                     <div class="date-input-container">
                         <input type="date" 
@@ -959,15 +1499,12 @@
                             onchange="handleDateChange(this.value)"
                             value="">
                     </div>
-                    <div id="currentDateDisplay" class="current-date">
-                        <!-- Date will be inserted here by JavaScript -->
-                    </div>
                     <button class="date-nav-btn today-btn" onclick="navigateDate('today')">
                         <i class="fas fa-calendar-day"></i>
-                        Today
+                        <span data-i18n="today">Today</span>
                     </button>
                     <button class="date-nav-btn next-day-btn" onclick="navigateDate('next')">
-                        Next Day
+                        <span data-i18n="next_day">Next Day</span>
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
@@ -976,9 +1513,10 @@
             <div class="content-grid">
                 <div class="records-section">
                     <div class="section-header">
-                        <h2 class="section-title">Care Records</h2>
+                        <h2 class="section-title" data-i18n="care_records">Care Records</h2>
                         <button class="btn btn-danger" onclick="deleteSelected()">
-                            <i class="fas fa-trash"></i> Delete Selected
+                            <i class="fas fa-trash"></i>
+                            <span data-i18n="delete_selected">Delete Selected</span>
                         </button>
                     </div>
                     <table>
@@ -987,10 +1525,10 @@
                                 <th class="checkbox-cell">
                                     <input type="checkbox" onclick="toggleAllCheckboxes(this)">
                                 </th>
-                                <th class="time-cell">Time</th>
-                                <th class="type-cell">Care Type</th>
-                                <th class="details-cell">Details</th>
-                                <th class="notes-cell">Notes</th>
+                                <th class="time-cell" data-i18n="time">Time</th>
+                                <th class="type-cell" data-i18n="care_type">Care Type</th>
+                                <th class="details-cell" data-i18n="details">Details</th>
+                                <th class="notes-cell" data-i18n="notes">Notes</th>
                             </tr>
                         </thead>
                         <tbody id="careList">
@@ -1000,50 +1538,72 @@
 
                 <div class="form-section">
                     <div class="section-header">
-                        <h2 class="section-title">Add New Record</h2>
+                        <h2 class="section-title" data-i18n="add_record">Add New Record</h2>
                     </div>
                     <form id="careForm" class="care-form">
-                        <div class="datetime-container">
-                            <div class="form-group date-time-input">
-                                <label for="recordDate">Date</label>
-                                <input type="date" id="recordDate" class="form-control" required>
-                            </div>
-                            <div class="form-group date-time-input">
-                                <label for="recordTime">Time</label>
-                                <input type="time" id="recordTime" class="form-control" required pattern="[0-9]{2}:[0-9]{2}" step="60">
+                        <div class="form-group improved-datetime-container">
+                            <label data-i18n="date_and_time">Date and Time</label>
+                            <div class="datetime-inputs-wrapper">
+                                <div class="datetime-input-container">
+                                    <i class="fas fa-calendar-alt input-icon"></i>
+                                    <input type="date" id="recordDate" name="recordDate" class="form-control date-input" required>
+                                </div>
+                                <div class="datetime-input-container">
+                                    <i class="fas fa-clock input-icon"></i>
+                                    <input type="time" id="recordTime" name="recordTime" class="form-control time-input" required>
+                                </div>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="careType">Care Type</label>
+                            <label for="careType" data-i18n="care_type">Care Type</label>
                             <select id="careType" class="form-control" required onchange="updateFormFields()">
-                                <option value="">Select care type</option>
-                                <option value="formula">Formula Feeding</option>
-                                <option value="breastfeeding">Breastfeeding</option>
-                                <option value="diaper">Diaper Change</option>
+                                <option value="" data-i18n="select_care_type">Select care type</option>
+                                <option value="formula" data-i18n="formula">Formula Feeding</option>
+                                <option value="breast_milk_bottle" data-i18n="breast_milk_bottle">Breast Milk Bottle</option>
+                                <option value="breastfeeding" data-i18n="breastfeeding">Breastfeeding</option>
+                                <option value="diaper" data-i18n="diaper">Diaper Change</option>
+                                <option value="sleep" data-i18n="sleep">Sleep</option>
                             </select>
                         </div>
                         <div id="volumeGroup" class="form-group" style="display: none;">
-                            <label for="volume">Volume (ml)</label>
+                            <label for="volume" data-i18n="volume_ml">Volume (ml)</label>
                             <input type="number" id="volume" class="form-control" min="0">
                         </div>
                         <div id="durationGroup" class="form-group" style="display: none;">
-                            <label for="duration">Duration (minutes)</label>
+                            <label for="duration" data-i18n="duration_min">Duration (minutes)</label>
                             <input type="number" id="duration" class="form-control" min="0">
                         </div>
+                        <div id="sleepGroup" class="form-group" style="display: none;">
+                            <label for="sleepDuration" data-i18n="sleep_duration">Sleep Duration</label>
+                            <div class="mobile-friendly-sleep">
+                                <div class="sleep-input-wrapper">
+                                    <div class="sleep-input-block">
+                                        <input type="number" id="sleepHours" class="sleep-input" min="0" max="24" value="0">
+                                        <label for="sleepHours" class="sleep-input-label" data-i18n="hours">Hours</label>
+                                    </div>
+                                    <div class="sleep-input-divider">:</div>
+                                    <div class="sleep-input-block">
+                                        <input type="number" id="sleepMinutes" class="sleep-input" min="0" max="59" value="0">
+                                        <label for="sleepMinutes" class="sleep-input-label" data-i18n="minutes">Minutes</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div id="diaperTypeGroup" class="form-group" style="display: none;">
-                            <label for="diaperType">Diaper Type</label>
+                            <label for="diaperType" data-i18n="diaper_type">Diaper Type</label>
                             <select id="diaperType" class="form-control">
-                                <option value="pee">Pee</option>
-                                <option value="poo">Poo</option>
-                                <option value="both">Both</option>
+                                <option value="pee" data-i18n="pee">Pee</option>
+                                <option value="poo" data-i18n="poo">Poo</option>
+                                <option value="both" data-i18n="both">Both</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="notes">Notes</label>
+                            <label for="notes" data-i18n="notes">Notes</label>
                             <textarea id="notes" class="form-control" rows="3"></textarea>
                         </div>
                         <button type="submit" class="submit-btn">
-                            <i class="fas fa-plus"></i> Add Record
+                            <i class="fas fa-plus-circle"></i>
+                            <span data-i18n="add_record_btn">Add Record</span>
                         </button>
                     </form>
                 </div>
@@ -1051,6 +1611,9 @@
         </div>
     </div>
 
+    <!-- Add translation script before other scripts -->
+    <script src="js/i18n/translations.js"></script>
+    
     <script>
         // Add timezone and date format constants
         const TIME_ZONE = 'America/Los_Angeles';
@@ -1119,66 +1682,58 @@
         // Initialize the app
         async function initializeApp() {
             try {
-                // Check server health first
-                const isHealthy = await checkServerHealth();
-                if (!isHealthy) {
-                    throw new Error('Server is not ready');
-                }
-
-                // Initialize global variable with timezone consideration
-                const today = new Date();
-                window.currentDate = today.toLocaleDateString('en-CA'); // Use en-CA for YYYY-MM-DD format
-
-                // Initialize date/time inputs
+                // Initialize the date and time pickers
                 initializeDateTimeInputs();
                 
-                // Update date display immediately
-                updateDateDisplay();
-                
-                // Load initial records
+                // Load current date's records
                 await loadCareRecords();
                 
-                // Set up form field visibility
-                updateFormFields();
+                // Set up event listeners
+                setupEventListeners();
                 
                 logToConsole('info', 'App initialized successfully');
+                showNotification(i18n.t('welcome_to_baby_care_app'), 'success');
+                
+                // Enable visible content
+                document.documentElement.classList.remove('no-transitions');
+                document.documentElement.style.visibility = 'visible';
             } catch (error) {
                 logToConsole('error', 'App initialization failed', { error: error.message });
-                showNotification('Failed to initialize application: ' + error.message, 'error');
+                showNotification(i18n.t('initialization_failed') + ': ' + error.message, 'error');
+                // Still make content visible in case of error
+                document.documentElement.style.visibility = 'visible';
             }
         }
 
-        // Initialize the app when DOM is loaded
-        document.addEventListener('DOMContentLoaded', async function() {
+        // Call initializeApp when the document is ready
+        document.addEventListener('DOMContentLoaded', async () => {
             try {
-                initializeTheme(); // Initialize theme
+                // Initialize i18n
+                i18n.init();
+                
+                // Initialize theme
+                initializeTheme();
+                
+                // Initialize sidebar
+                initializeSidebar();
+                
+                // 添加侧边栏切换按钮事件处理
+                const toggleBtn = document.querySelector('.sidebar-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        toggleSidebar(e);
+                    });
+                }
+                
+                // Initialize the app after sidebar and theme are ready
                 await initializeApp();
                 
-                // Set up auto-refresh of time in PST
-                setInterval(() => {
-                    const now = new Date();
-                    const pstTime = new Date(now.toLocaleString("en-US", {
-                        timeZone: "America/Los_Angeles"
-                    }));
-                    const time = pstTime.toLocaleTimeString('en-GB', {
-                        hour12: false,
-                        hour: '2-digit',
-                        minute: '2-digit',
-                    });
-                    const recordTimeInput = document.getElementById('recordTime');
-                    if (recordTimeInput) {
-                        recordTimeInput.value = time;
-                    }
-                }, 60000); // Update every minute
-                
-                // Restore sidebar state
-                const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                if (sidebarCollapsed) {
-                    document.querySelector('.sidebar').classList.add('collapsed');
-                }
+                console.log('Dashboard page initialization complete');
             } catch (error) {
-                logToConsole('error', 'Failed to initialize app', { error: error.message });
-                showNotification('Failed to initialize app: ' + error.message, 'error');
+                console.error('Failed to initialize dashboard page:', error);
+                showNotification('Failed to initialize dashboard page: ' + error.message, 'error');
+                // Make content visible in case of error
+                document.documentElement.style.visibility = 'visible';
             }
         });
 
@@ -1206,10 +1761,19 @@
                 selectedDateInput.max = maxDate;
                 recordDateInput.max = maxDate;
                 
-                recordDateInput.value = date;
-                recordTimeInput.value = time;
-                selectedDateInput.value = date;
-                window.currentDate = date;
+                // Only set initial values if they haven't been set before
+                if (!recordDateInput.value) {
+                    recordDateInput.value = date;
+                }
+                if (!recordTimeInput.value) {
+                    recordTimeInput.value = time;
+                }
+                if (!selectedDateInput.value) {
+                    selectedDateInput.value = date;
+                }
+                if (!window.currentDate) {
+                    window.currentDate = date;
+                }
                 
                 updateDateDisplay();
                 
@@ -1228,21 +1792,45 @@
             }
         }
 
+        // Add this helper function for date formatting
+        function getLocalizedDateFormat() {
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: TIME_ZONE
+            };
+
+            // Use Chinese format for Chinese locale
+            if (i18n.currentLocale === 'zh-CN') {
+                return {
+                    ...options,
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                };
+            }
+
+            return options;
+        }
+
+        // Update updateDateDisplay function
         function updateDateDisplay() {
             try {
                 // Create date object from current date
-                const selectedDate = new Date(window.currentDate + 'T00:00:00');
+                const selectedDate = new Date(window.currentDate);
                 if (isNaN(selectedDate.getTime())) {
                     throw new Error('Invalid date');
                 }
 
-                // Format the date string with timezone
-                const displayDate = selectedDate.toLocaleDateString('en-US', DATE_FORMAT_OPTIONS);
+                // Format the date string with timezone and current locale
+                let displayDate = selectedDate.toLocaleDateString(i18n.currentLocale, getLocalizedDateFormat());
                 
-                // Update the header display
-                const displayElement = document.getElementById('currentDateDisplay');
-                if (displayElement) {
-                    displayElement.textContent = displayDate;
+                // For Chinese locale, add the year marker
+                if (i18n.currentLocale === 'zh-CN') {
+                    displayDate = displayDate.replace('年', '年 ').replace('月', '月 ').replace('日', '日 ');
                 }
                 
                 // Update date inputs
@@ -1258,11 +1846,12 @@
                 
                 logToConsole('info', 'Date display updated successfully', {
                     currentDate: window.currentDate,
-                    displayDate
+                    displayDate,
+                    locale: i18n.currentLocale
                 });
             } catch (error) {
                 logToConsole('error', 'Failed to update date display', { error: error.message });
-                showNotification('Error updating date display', 'error');
+                showNotification(i18n.t('error_occurred') + ': ' + error.message, 'error');
             }
         }
 
@@ -1273,11 +1862,16 @@
                     throw new Error('Invalid current date');
                 }
 
+                // Store the current time value
+                const currentTime = document.getElementById('recordTime').value;
+
                 // Get today's date at midnight for comparison
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
                 let newDate;
+                let shouldUpdateTime = false; // Only update time for 'today' button
+
                 switch (direction) {
                     case 'prev':
                         newDate = new Date(currentSelectedDate);
@@ -1287,12 +1881,18 @@
                         newDate = new Date(currentSelectedDate);
                         newDate.setDate(currentSelectedDate.getDate() + 1);
                         if (newDate > today) {
-                            showNotification('Cannot navigate to future dates', 'warning');
-                            return;
+                            showNotification(i18n.t('cannot_select_future_dates'), 'warning');
+                            newDate = today;
                         }
                         break;
                     case 'today':
                         newDate = today;
+                        shouldUpdateTime = true; // Update time only when "Today" is clicked
+                        // Get current time in PST
+                        const now = new Date().toLocaleString('en-US', { timeZone: TIME_ZONE });
+                        const pstDate = new Date(now);
+                        const newTime = DATE_TIME_FORMAT.format(pstDate).split(', ')[1];
+                        document.getElementById('recordTime').value = newTime;
                         break;
                     default:
                         throw new Error('Invalid navigation direction');
@@ -1304,14 +1904,21 @@
                 // Update display and load new records
                 updateDateDisplay();
                 await loadCareRecords();
+
+                // Restore the previous time if we're not updating to current time
+                if (!shouldUpdateTime) {
+                    document.getElementById('recordTime').value = currentTime;
+                }
                 
                 logToConsole('info', 'Date navigation successful', {
                     direction,
-                    newDate: window.currentDate
+                    newDate: window.currentDate,
+                    timeUpdated: shouldUpdateTime,
+                    currentTime: shouldUpdateTime ? 'updated to now' : currentTime
                 });
             } catch (error) {
                 logToConsole('error', 'Date navigation failed', { error: error.message });
-                showNotification('Error navigating date: ' + error.message, 'error');
+                showNotification(i18n.t('error_navigating_date') + ': ' + error.message, 'error');
             }
         }
 
@@ -1357,7 +1964,7 @@
                 updateCareList(sortedRecords);
             } catch (error) {
                 logToConsole('error', 'Failed to load records', { error: error.message });
-                showNotification('Failed to load records: ' + error.message, 'error');
+                showNotification(i18n.t('failed_to_load_records') + ': ' + error.message, 'error');
             }
         }
 
@@ -1368,7 +1975,7 @@
             careList.innerHTML = `
                 <tr>
                     <td colspan="6" style="text-align: center; padding: 2rem;">
-                        Loading...
+                        ${i18n.t('loading')}...
                     </td>
                 </tr>
             `;
@@ -1378,7 +1985,7 @@
                     careList.innerHTML = `
                         <tr>
                             <td colspan="6" style="text-align: center; padding: 2rem;">
-                                No records found for this date
+                                ${i18n.t('no_records_found_for_this_date')}
                             </td>
                         </tr>
                     `;
@@ -1405,31 +2012,50 @@
                 careList.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">
-                            Error updating records: ${error.message}
+                            ${i18n.t('error_updating_records')} ${error.message}
                         </td>
                     </tr>
                 `;
             }
         }
 
+        // Function to create a table row for a care record
         function createRecordRow(record, timestamp) {
-            // Parse the timestamp and format it in PST
-            const date = new Date(record.timestamp);
-            const formattedTime = DATE_TIME_FORMAT.format(date).split(', ')[1];
+            const formattedTime = timestamp.toLocaleTimeString(i18n.currentLocale, TIME_FORMAT_OPTIONS);
 
-            // Get record details based on type
+            // Format details based on record type
             let details = '';
             switch(record.type) {
                 case 'formula':
-                    details = `${record.volume} ml`;
+                case 'breast_milk_bottle':
+                    details = `${record.volume} ${i18n.t('ml')}`;
                     break;
                 case 'breastfeeding':
-                    details = `${record.duration} min`;
+                    details = `${record.duration} ${i18n.t('minutes')}`;
                     break;
                 case 'diaper':
-                    details = record.diaperType;
+                    details = i18n.t(record.diaperType);
+                    break;
+                case 'sleep':
+                    // Convert total minutes to hours and minutes
+                    const hours = Math.floor(record.duration / 60);
+                    const minutes = record.duration % 60;
+                    
+                    // Format sleep duration
+                    let sleepDetails = [];
+                    if (hours > 0) {
+                        sleepDetails.push(`${hours} ${i18n.t('hours')}`);
+                    }
+                    if (minutes > 0 || hours === 0) {
+                        sleepDetails.push(`${minutes} ${i18n.t('minutes')}`);
+                    }
+                    
+                    details = sleepDetails.join(' ');
                     break;
             }
+
+            // Translate the care type
+            const translatedType = i18n.t(record.type);
 
             return `
                 <tr data-id="${record._id}" data-timestamp="${timestamp.getTime()}">
@@ -1437,17 +2063,12 @@
                         <input type="checkbox" onchange="toggleRecordSelection('${record._id}')">
                     </td>
                     <td class="time-cell">${formattedTime}</td>
-                    <td class="type-cell">${record.type}</td>
+                    <td class="type-cell">${translatedType}</td>
                     <td class="details-cell">${details}</td>
                     <td class="notes-cell">${record.notes || ''}</td>
                 </tr>
             `;
         }
-
-        // Call initializeApp when the document is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeApp();
-        });
 
         // Add these functions after createRecordRow
         function toggleRecordSelection(recordId) {
@@ -1476,12 +2097,12 @@
 
         async function deleteSelected() {
             if (selectedRecords.size === 0) {
-                showNotification('No records selected', 'error');
+                showNotification(i18n.t('no_records_selected'), 'error');
                 return;
             }
 
             try {
-                const confirmed = window.confirm('Are you sure you want to delete the selected records?');
+                const confirmed = window.confirm(i18n.t('are_you_sure_you_want_to_delete_selected_records'));
                 
                 if (!confirmed) return;
 
@@ -1495,7 +2116,7 @@
                     throw new Error('Failed to delete records');
                 }
 
-                showNotification('Records deleted successfully', 'success');
+                showNotification(i18n.t('records_deleted_successfully'), 'success');
                 selectedRecords.clear();
                 // Deselect all checkboxes including the header checkbox
                 const headerCheckbox = document.querySelector('thead input[type="checkbox"]');
@@ -1515,7 +2136,7 @@
                 });
             } catch (error) {
                 logToConsole('error', 'Failed to delete records', { error: error.message });
-                showNotification('Failed to delete records: ' + error.message, 'error');
+                showNotification(i18n.t('failed_to_delete_records') + ': ' + error.message, 'error');
             }
         }
 
@@ -1531,6 +2152,9 @@
                 // Get date and time values
                 const recordDate = document.getElementById('recordDate').value;
                 const recordTime = document.getElementById('recordTime').value;
+
+                // Store current time for later
+                const currentTime = recordTime;
 
                 // Validate date and time
                 if (!recordDate || !recordTime) {
@@ -1551,7 +2175,8 @@
                 const now = new Date();
                 const nowPST = new Date(now.toLocaleString('en-US', { timeZone: TIME_ZONE }));
                 if (inputTimestamp > now) {
-                    throw new Error('Cannot create records for future times');
+                    showNotification(i18n.t('cannot_select_future_dates'), 'warning');
+                    newDate = now;
                 }
 
                 const formData = {
@@ -1564,6 +2189,7 @@
                 // Add specific fields based on care type
                 switch(formData.type) {
                     case 'formula':
+                    case 'breast_milk_bottle':
                         const volume = parseInt(document.getElementById('volume').value);
                         if (isNaN(volume) || volume <= 0) {
                             throw new Error('Please enter a valid volume');
@@ -1584,6 +2210,25 @@
                         }
                         formData.diaperType = diaperType;
                         break;
+                    case 'sleep':
+                        const sleepHours = parseInt(document.getElementById('sleepHours').value) || 0;
+                        const sleepMinutes = parseInt(document.getElementById('sleepMinutes').value) || 0;
+                        
+                        if (sleepHours === 0 && sleepMinutes === 0) {
+                            throw new Error(i18n.t('please_enter_valid_sleep_duration'));
+                        }
+                        
+                        if (sleepHours < 0 || sleepHours > 24) {
+                            throw new Error(i18n.t('hours_must_be_between_0_and_24'));
+                        }
+                        
+                        if (sleepMinutes < 0 || sleepMinutes > 59) {
+                            throw new Error(i18n.t('minutes_must_be_between_0_and_59'));
+                        }
+                        
+                        // Convert to total minutes for storage
+                        formData.duration = sleepHours * 60 + sleepMinutes;
+                        break;
                 }
 
                 logToConsole('info', 'Submitting form data', { formData });
@@ -1602,28 +2247,39 @@
                 }
 
                 const responseData = await response.json();
-                showNotification('Record added successfully', 'success');
+                showNotification(i18n.t('record_added_successfully'), 'success');
                 
-                // Reset form but keep the current date
+                // Keep the current date and time
                 const currentFormDate = document.getElementById('recordDate').value;
-                this.reset();
-                initializeDateTimeInputs();
-                // Set the form date back to the date of the submitted record
-                document.getElementById('recordDate').value = recordDate;
-                // Keep the selected date in the date picker
-                document.getElementById('selectedDate').value = recordDate;
-                window.currentDate = recordDate;
+                
+                // Reset form fields
+                document.getElementById('careType').value = '';
+                document.getElementById('volume').value = '';
+                document.getElementById('duration').value = '';
+                document.getElementById('diaperType').value = 'pee';
+                document.getElementById('sleepHours').value = '0';
+                document.getElementById('sleepMinutes').value = '0';
+                document.getElementById('notes').value = '';
+                
+                // Restore the date and time
+                document.getElementById('recordDate').value = currentFormDate;
+                document.getElementById('recordTime').value = currentTime;
+                document.getElementById('selectedDate').value = currentFormDate;
+                window.currentDate = currentFormDate;
+                
+                // Update form fields and restore volume if needed
                 updateFormFields();
-                updateDateDisplay();
+                
                 await loadCareRecords();
 
                 logToConsole('info', 'Record added successfully', { 
                     record: responseData,
-                    stayingOnDate: recordDate
+                    stayingOnDate: recordDate,
+                    preservedTime: currentTime
                 });
             } catch (error) {
                 logToConsole('error', 'Failed to add record', { error: error.message });
-                showNotification('Failed to add record: ' + error.message, 'error');
+                showNotification(i18n.t('failed_to_add_record') + ': ' + error.message, 'error');
             }
         });
 
@@ -1632,15 +2288,18 @@
             const volumeGroup = document.getElementById('volumeGroup');
             const durationGroup = document.getElementById('durationGroup');
             const diaperTypeGroup = document.getElementById('diaperTypeGroup');
+            const sleepGroup = document.getElementById('sleepGroup');
             
             // Hide all fields first
             volumeGroup.style.display = 'none';
             durationGroup.style.display = 'none';
             diaperTypeGroup.style.display = 'none';
+            sleepGroup.style.display = 'none';
             
             // Show relevant fields based on care type
             switch(careType) {
                 case 'formula':
+                case 'breast_milk_bottle':
                     volumeGroup.style.display = 'block';
                     document.getElementById('volume').required = true;
                     document.getElementById('duration').required = false;
@@ -1658,9 +2317,15 @@
                     document.getElementById('duration').required = false;
                     document.getElementById('diaperType').required = true;
                     break;
+                case 'sleep':
+                    sleepGroup.style.display = 'block';
+                    document.getElementById('volume').required = false;
+                    document.getElementById('duration').required = false;
+                    document.getElementById('diaperType').required = false;
+                    break;
             }
 
-            // Reset values of hidden fields
+            // Only reset values if the field is hidden
             if (volumeGroup.style.display === 'none') {
                 document.getElementById('volume').value = '';
             }
@@ -1669,6 +2334,10 @@
             }
             if (diaperTypeGroup.style.display === 'none') {
                 document.getElementById('diaperType').value = 'pee';
+            }
+            if (sleepGroup.style.display === 'none') {
+                document.getElementById('sleepHours').value = '0';
+                document.getElementById('sleepMinutes').value = '0';
             }
 
             logToConsole('info', 'Form fields updated', { careType });
@@ -1733,18 +2402,43 @@
                 return true;
             } catch (error) {
                 logToConsole('error', 'Health check failed', { error: error.message });
-                showNotification('Server connection error: ' + error.message, 'error');
+                showNotification(i18n.t('server_connection_error') + ': ' + error.message, 'error');
                 return false;
             }
         }
 
-        // Add this function before the existing script
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('collapsed');
-            
-            // Save state to localStorage
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        // Toggle sidebar function
+        function toggleSidebar(event) {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                sidebar.classList.toggle('collapsed');
+                dashboardContainer.classList.toggle('sidebar-collapsed');
+                
+                // Update button icon based on sidebar state
+                const toggleBtn = document.querySelector('.sidebar-toggle i');
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.className = 'fas fa-chevron-right';
+                } else {
+                    toggleBtn.className = 'fas fa-chevron-left';
+                }
+                
+                // Save sidebar state to localStorage - 兼容两种键名
+                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                
+                // 阻止事件冒泡和默认行为
+                if (event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+                
+                console.log('Sidebar toggled successfully:', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to toggle sidebar:', error);
+                showNotification('Failed to toggle sidebar: ' + error.message, 'error');
+            }
         }
 
         // Add global error handler
@@ -1756,7 +2450,7 @@
                 column: col,
                 error: error?.message
             });
-            showNotification('An error occurred: ' + error?.message, 'error');
+            showNotification(i18n.t('an_error_occurred') + ': ' + error?.message, 'error');
             return false;
         };
 
@@ -1767,23 +2461,26 @@
                 
                 // Check if selected date is in the future
                 if (newDate > today) {
-                    showNotification('Cannot select future dates', 'warning');
-                    // Reset to today's date
+                    showNotification(i18n.t('cannot_select_future_dates'), 'warning');
                     newDate = today;
                 }
 
                 // Parse the selected date
-                const selectedDate = new Date(newDate + 'T00:00:00').toLocaleString('en-US', {
-                    timeZone: TIME_ZONE
-                });
+                const selectedDate = new Date(newDate);
                 if (isNaN(selectedDate.getTime())) {
                     throw new Error('Invalid date selected');
                 }
+
+                // Store current time value
+                const currentTime = document.getElementById('recordTime').value;
 
                 // Format date consistently
                 window.currentDate = newDate;
                 document.getElementById('recordDate').value = newDate;
                 document.getElementById('selectedDate').value = newDate;
+
+                // Preserve the current time
+                document.getElementById('recordTime').value = currentTime;
 
                 // Update display with the same date
                 updateDateDisplay();
@@ -1791,13 +2488,14 @@
 
                 logToConsole('info', 'Date changed', { 
                     newDate,
-                    selectedDate,
+                    selectedDate: selectedDate.toISOString(),
                     currentDate: window.currentDate,
-                    timezone: TIME_ZONE
+                    timezone: TIME_ZONE,
+                    preservedTime: currentTime
                 });
             } catch (error) {
                 logToConsole('error', 'Failed to handle date change', { error: error.message });
-                showNotification('Failed to change date: ' + error.message, 'error');
+                showNotification(i18n.t('failed_to_change_date') + ': ' + error.message, 'error');
             }
         }
 
@@ -1808,6 +2506,36 @@
             updateThemeIcon();
         }
 
+        // Initialize sidebar state
+        function initializeSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                // 支持两种localStorage键名
+                let isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                // 如果新键名存在，优先使用新键名的值
+                if (localStorage.getItem('sidebarCollapsed') !== null) {
+                    isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                }
+                
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    dashboardContainer.classList.add('sidebar-collapsed');
+                    // Update button icon
+                    const toggleBtn = document.querySelector('.sidebar-toggle i');
+                    if (toggleBtn) {
+                        toggleBtn.className = 'fas fa-chevron-right';
+                    }
+                }
+                
+                console.log('Sidebar initialized successfully:', isCollapsed ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to initialize sidebar:', error);
+                showNotification('Failed to initialize sidebar: ' + error.message, 'error');
+            }
+        }
+
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -1816,7 +2544,8 @@
             localStorage.setItem('theme', newTheme);
             
             updateThemeIcon();
-            showNotification(`Switched to ${newTheme} mode`, 'success');
+            const themeText = i18n.t(newTheme === 'dark' ? 'dark_mode' : 'light_mode');
+            showNotification(i18n.t('switched_to') + ' ' + themeText, 'success');
         }
 
         function updateThemeIcon() {
@@ -1826,10 +2555,62 @@
             
             if (currentTheme === 'dark') {
                 themeIcon.className = 'fas fa-moon';
-                themeText.textContent = 'Dark mode';
+                themeText.setAttribute('data-i18n', 'dark_mode');
             } else {
                 themeIcon.className = 'fas fa-sun';
-                themeText.textContent = 'Light mode';
+                themeText.setAttribute('data-i18n', 'light_mode');
+            }
+            // Update the text content using i18n
+            themeText.textContent = i18n.t(currentTheme === 'dark' ? 'dark_mode' : 'light_mode');
+        }
+
+        // Add this new function for handling navigation
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-item');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.getAttribute('href') === '#') return;
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    // Add a small delay to allow the current page to save any necessary state
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 50);
+                });
+            });
+        }
+
+        // Add this function to set up event listeners
+        function setupEventListeners() {
+            try {
+                // Add theme switch listener
+                const themeSwitch = document.querySelector('.theme-switch');
+                if (themeSwitch) {
+                    themeSwitch.removeEventListener('click', toggleTheme);
+                    themeSwitch.addEventListener('click', toggleTheme);
+                }
+                
+                // Add date change listener
+                const selectedDateInput = document.getElementById('selectedDate');
+                if (selectedDateInput) {
+                    selectedDateInput.addEventListener('change', function() {
+                        handleDateChange(this.value);
+                    });
+                }
+                
+                // Add care type change listener
+                const careTypeSelect = document.getElementById('careType');
+                if (careTypeSelect) {
+                    careTypeSelect.addEventListener('change', updateFormFields);
+                }
+                
+                // Set up navigation
+                setupNavigation();
+                
+                logToConsole('info', 'Event listeners set up successfully');
+            } catch (error) {
+                logToConsole('error', 'Failed to set up event listeners', { error: error.message });
+                throw error;
             }
         }
     </script>

@@ -311,8 +311,8 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 ]);
                 
                 // Verify record in list
-                await expect(page.locator(`td:has-text("${volume} ml")`)).toBeVisible();
-                await expect(page.locator(`td:has-text("${notes}")`)).toBeVisible();
+                await expect(page.locator('td.details-cell').filter({ hasText: `${volume} ml` }).first()).toBeVisible();
+                await expect(page.locator('td.notes-cell').filter({ hasText: notes }).first()).toBeVisible();
                 
                 // Verify timestamp is in local timezone
                 const recordTime = await page.locator('tr:has-text("120 ml") td.timestamp').textContent();
@@ -338,8 +338,8 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 ]);
                 
                 // Verify record in list
-                await expect(page.locator(`td:has-text("${duration} min")`)).toBeVisible();
-                await expect(page.locator(`td:has-text("${notes}")`)).toBeVisible();
+                await expect(page.locator('td.details-cell').filter({ hasText: `${duration} min` }).first()).toBeVisible();
+                await expect(page.locator('td.notes-cell').filter({ hasText: notes }).first()).toBeVisible();
             });
 
             test('should update feeding record', async ({ page }) => {
@@ -356,8 +356,8 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 ]);
                 
                 // Click edit button and wait for form update
-                await page.click('.edit-btn >> nth=0');
-                await page.waitForTimeout(100);
+                await page.locator('.edit-btn').first().click();
+                await page.waitForTimeout(500); // Increased timeout for form update
                 
                 // Update values
                 await fillForm(page, {
@@ -390,7 +390,7 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 ]);
                 
                 // Verify record exists
-                await expect(page.locator('td:has-text("To be deleted")')).toBeVisible();
+                await expect(page.locator('td.notes-cell').filter({ hasText: 'To be deleted' }).first()).toBeVisible();
                 
                 // Set up dialog handler before clicking delete
                 const dialogPromise = waitForAlert(page);
@@ -468,8 +468,8 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 }
                 
                 // Select all records
-                await page.click('.select-all-checkbox');
-                await page.waitForTimeout(100);
+                await page.locator('.select-all-checkbox').first().click();
+                await page.waitForTimeout(500); // Increased timeout for checkbox update
                 
                 // Set up dialog handler before clicking delete
                 const dialogPromise = waitForAlert(page);
@@ -484,6 +484,65 @@ test.describe('Baby Care Tracker E2E Tests', () => {
                 // Verify all records are removed
                 await expect(page.locator('td:has-text("ml")')).not.toBeVisible();
             });
+        });
+    });
+
+    // Chinese Translation Tests
+    test.describe('Chinese Translation Tests', () => {
+        test('should display all content in Chinese when language is set to Chinese', async ({ page }) => {
+            // Navigate to the page
+            await page.goto('/');
+            await page.waitForLoadState('networkidle');
+
+            // Change language to Chinese
+            await page.selectOption('select#language', 'zh-CN');
+            await page.waitForTimeout(1000); // Wait for translations to apply
+
+            // Add a test record
+            const volume = 120;
+            const notes = '测试备注';
+            await page.fill('#volume', volume.toString());
+            await page.fill('#notes', notes);
+            await page.click('.submit-btn');
+            await page.waitForTimeout(1000); // Wait for record to be added
+
+            // Verify the added record shows Chinese text
+            await expect(page.locator('td.notes-cell').filter({ hasText: notes }).first()).toBeVisible();
+
+            // Verify UI elements are in Chinese
+            await expect(page.locator('[data-i18n="nav_dashboard"]')).toHaveText('仪表板');
+            await expect(page.locator('[data-i18n="volume_ml"]')).toHaveText('容量 (毫升)');
+            await expect(page.locator('[data-i18n="notes"]')).toHaveText('备注');
+            await expect(page.locator('[data-i18n="add_record_btn"]')).toHaveText('添加记录');
+
+            // Verify the date is in Chinese format
+            const currentDateDisplay = await page.locator('#currentDateDisplay').textContent();
+            expect(currentDateDisplay).toMatch(/\d{4}年\d{1,2}月\d{1,2}日/);
+        });
+
+        test('should persist Chinese language setting after page reload', async ({ page }) => {
+            // Navigate to the page
+            await page.goto('/');
+            await page.waitForLoadState('networkidle');
+
+            // Change language to Chinese
+            await page.selectOption('select#language', 'zh-CN');
+            await page.waitForTimeout(1000); // Wait for translations to apply
+
+            // Reload the page
+            await page.reload();
+            await page.waitForLoadState('networkidle');
+            await page.waitForTimeout(1000); // Wait for translations to apply
+
+            // Verify UI elements are still in Chinese
+            await expect(page.locator('[data-i18n="nav_dashboard"]')).toHaveText('仪表板');
+            await expect(page.locator('[data-i18n="volume_ml"]')).toHaveText('容量 (毫升)');
+            await expect(page.locator('[data-i18n="notes"]')).toHaveText('备注');
+            await expect(page.locator('[data-i18n="add_record_btn"]')).toHaveText('添加记录');
+
+            // Verify the date is still in Chinese format
+            const currentDateDisplay = await page.locator('#currentDateDisplay').textContent();
+            expect(currentDateDisplay).toMatch(/\d{4}年\d{1,2}月\d{1,2}日/);
         });
     });
 }); 

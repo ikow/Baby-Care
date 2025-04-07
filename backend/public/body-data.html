@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>身体数据 - 婴儿护理</title>
+    <script>
+        // Utility function to load script asynchronously
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Immediately apply theme and language before page renders
+        (function() {
+            // Hide content until everything is initialized
+            document.documentElement.style.visibility = 'hidden';
+            
+            // Apply theme
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Apply language
+            const language = localStorage.getItem('language') || 'en';
+            document.documentElement.setAttribute('lang', language);
+            
+            // Add a class to prevent transitions during page load
+            document.documentElement.classList.add('no-transitions');
+
+            // Load translations asynchronously
+            document.addEventListener('DOMContentLoaded', async function() {
+                try {
+                    // First load translations
+                    await loadScript('/js/i18n/translations.js');
+                    
+                    // Initialize i18n if available
+                    if (typeof i18n !== 'undefined') {
+                        i18n.currentLocale = language;
+                        if (typeof i18n.init === 'function') {
+                            i18n.init();
+                        }
+                    }
+                    
+                    // Then make content visible
+                    setTimeout(function() {
+                        document.documentElement.classList.remove('no-transitions');
+                        document.documentElement.style.visibility = 'visible';
+                    }, 100);
+                } catch (error) {
+                    console.error('Failed to initialize page:', error);
+                    // Still show the page even if translations failed to load
+                    document.documentElement.style.visibility = 'visible';
+                }
+            });
+        })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Add libraries in the correct order: first luxon, then Chart.js, then the adapter -->
+    <script src="https://cdn.jsdelivr.net/npm/luxon@2.3.1/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.1.0/dist/chartjs-adapter-luxon.min.js"></script>
+    <!-- No need to include translations.js here as we're loading it dynamically -->
+    <!-- Add sidebar JS -->
+    <script src="/js/sidebar.js"></script>
+    <!-- Add sidebar CSS -->
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        /* Add this at the top of your styles */
+        .no-transitions * {
+            transition: none !important;
+        }
+
+        /* Theme Variables */
+        :root {
+            /* 主题颜色变量 - 浅色主题 */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #e8e8e8;
+            --accent-primary: #00b894;
+            --accent-secondary: #6c5ce7;
+            --accent-warning: #f39c12;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: #dfe6e9;
+            --success: #00b894;
+            --danger: #d63031;
+            --gold: #f1c40f;
+            --silver: #95a5a6;
+            --bronze: #d35400;
+            --chart-grid: #dddddd;
+            
+            /* 共享变量 */
+            --sidebar-width: 250px;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+        
+        :root[data-theme="dark"] {
+            /* 主题颜色变量 - 深色主题 */
+            --bg-primary: #1a1b1e;
+            --bg-secondary: #2a2b2f;
+            --bg-tertiary: #32333a;
+            --accent-primary: #64ffda;
+            --accent-secondary: #bb86fc;
+            --accent-warning: #ffb74d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --success: #00e676;
+            --danger: #ff5252;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --chart-grid: #444444;
+        }
+
+        /* Add global transition for theme changes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s ease,
+                      color 0.3s ease,
+                      border-color 0.3s ease,
+                      box-shadow 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        .dashboard-container.sidebar-collapsed {
+            grid-template-columns: 80px 1fr;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* 页面标题和描述 */
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .page-description {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+        
+        /* Card Styles */
+        .card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .card-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, var(--accent-primary), #4fd1c5);
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table th {
+            background-color: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Chart Styles */
+        .chart-container {
+            padding: 1.5rem;
+            min-height: 2500px;  /* 增加最小高度 */
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 1200px;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-wrapper h3 {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+        
+        /* Date Selector Styles */
+        .date-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .date-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        .date-btn:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+        
+        .date-btn.active {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--bg-secondary);
+            padding: 2rem 1rem;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease,
+                      background-color 0.3s ease,
+                      border-color 0.3s ease;
+            position: relative;
+            width: 250px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            height: 100vh; /* Ensure full height */
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+        }
+
+        /* Ensure logo stays centered when collapsed */
+        .sidebar.collapsed .sidebar-logo {
+            justify-content: center;
+            padding: 0 0.5rem 2rem 0.5rem;
+            width: 100%;
+        }
+
+        .sidebar.collapsed .sidebar-logo i {
+            margin: 0 auto;
+            min-width: 32px;
+        }
+
+        /* Prevent logo text from affecting layout when hidden */
+        .sidebar.collapsed .sidebar-logo h2 {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar nav {
+            flex: 1;
+            width: 100%;
+            margin-bottom: 2rem; /* Add space above theme switcher */
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            height: 60px;
+            width: 100%;
+        }
+
+        /* Logo icon styles */
+        .sidebar-logo i {
+            font-size: 2rem;
+            color: var(--accent-primary);
+            width: 32px;
+            text-align: center;
+            min-width: 32px; /* Prevent icon from shrinking */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Nav items transition */
+        .nav-item span {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 1;
+            transform: translateX(0);
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+            transform: translateX(-20px);
+            position: absolute;
+            left: 100%;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 1rem 0;
+            transition: padding 0.3s ease;
+            width: auto;
+        }
+
+        .sidebar.collapsed .theme-switch {
+            width: 40px;
+            padding: 0.5rem;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .sidebar.collapsed .theme-switch span {
+            display: none;
+        }
+
+        .sidebar.collapsed .theme-switch i {
+            margin-right: 0;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            height: 60px;
+            width: 100%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: var(--accent-primary);
+            width: 32px;
+            text-align: center;
+            min-width: 32px; /* Prevent icon from shrinking */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 1rem;
+            right: -14px;
+            background: var(--accent-primary);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1), 2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--accent-secondary);
+            transform: scale(1.1);
+        }
+
+        .nav-area {
+            flex: 1;
+            width: 100%;
+            margin-bottom: 2rem; /* Add space above theme switcher */
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease,
+                        background-color 0.3s ease,
+                        color 0.3s ease;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+            width: calc(100% - 2rem);
+            border: none;
+            color: var(--text-primary);
+        }
+
+        .theme-switch:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .theme-switch i {
+            font-size: 1rem;
+        }
+
+        /* Layout Helper */
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+        }
+
+        /* Signature Area */
+        .signature-pad-container {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 0.5rem;
+            background-color: var(--bg-tertiary);
+            height: 150px;
+        }
+
+        #signatureCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Notification styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        .alert-success {
+            background-color: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .alert-error {
+            background-color: var(--danger);
+            color: var(--bg-primary);
+        }
+
+        .alert i {
+            font-size: 1.2rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-wrapper {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: fixed;
+                width: 250px;
+                left: -250px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.mobile-visible {
+                left: 0;
+            }
+            
+            .sidebar-logo h2,
+            .nav-item span,
+            .theme-switch span {
+                display: block;
+            }
+            
+            .sidebar-logo {
+                justify-content: flex-start;
+                padding: 0 1rem 2rem;
+            }
+            
+            .sidebar-logo i {
+                margin-right: 0.75rem;
+            }
+            
+            .nav-item, 
+            .theme-switch {
+                justify-content: flex-start;
+                padding: 0.75rem 1rem;
+            }
+            
+            .nav-item i,
+            .theme-switch i {
+                margin-right: 0.75rem;
+            }
+            
+            .theme-switch {
+                width: calc(100% - 2rem);
+                margin-left: 1rem;
+            }
+            
+            .main-content {
+                padding: 1rem;
+                margin-left: 0;
+            }
+            
+            .mobile-menu-toggle {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-color: var(--accent-primary);
+                color: var(--bg-primary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                border: none;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+                z-index: 999;
+            }
+        }
+
+        /* Gender selector styles */
+        .gender-selector {
+            display: flex;
+            align-items: center;
+            margin: 0 1.25rem;
+            padding-bottom: 1rem;
+        }
+        
+        .gender-label {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 0.75rem;
+            cursor: pointer;
+        }
+        
+        .gender-label input {
+            margin-right: 0.35rem;
+        }
+
+        /* Chart info styles */
+        .chart-info {
+            padding: 0 1rem 1rem;
+            margin-top: 1rem;
+        }
+        
+        .chart-info p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.4;
+        }
+        
+        /* Remove bottom margin from last chart for better spacing with info text */
+        .chart-wrapper:last-of-type {
+            margin-bottom: 0.5rem;
+        }
+
+        .percentile-legend {
+            font-size: 0.85rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 5px;
+            margin-right: 5px;
+            border-radius: 1px;
+        }
+        [data-theme="dark"] .legend-text {
+            color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <button class="sidebar-toggle">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="sidebar-logo">
+                <i class="fas fa-baby"></i>
+                <h2 data-i18n="baby_care">婴儿护理</h2>
+            </div>
+            <nav>
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span data-i18n="nav_dashboard">仪表板</span>
+                </a>
+                <a href="statistics.html" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span data-i18n="nav_statistics">统计</span>
+                </a>
+                <a href="sleep-pattern.html" class="nav-item">
+                    <i class="fas fa-moon"></i>
+                    <span data-i18n="nav_sleep_pattern">睡眠模式</span>
+                </a>
+                <a href="body-data.html" class="nav-item active">
+                    <i class="fas fa-weight"></i>
+                    <span data-i18n="nav_body_data">身体数据</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span data-i18n="nav_settings">设置</span>
+                </a>
+            </nav>
+            <!-- Theme Switch Button -->
+            <div class="theme-switch">
+                <i class="fas fa-moon"></i>
+                <span data-i18n="dark_mode">Dark Mode</span>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <h1 data-i18n="body_data_title">身体数据</h1>
+            <div class="page-description" data-i18n="body_data_description">
+                记录和跟踪婴儿的体重和身高数据，观察生长发育曲线。
+            </div>
+            
+            <div class="row" style="gap: 1rem;">
+                <!-- 左边图表区域 -->
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2 data-i18n="growth_curves">生长曲线</h2>
+                    </div>
+                    <div class="gender-selector">
+                        <span data-i18n="reference_curves">参考曲线：</span>
+                        <label class="gender-label">
+                            <input type="radio" name="gender" value="male" checked>
+                            <span data-i18n="male">男孩</span>
+                        </label>
+                        <label class="gender-label">
+                            <input type="radio" name="gender" value="female">
+                            <span data-i18n="female">女孩</span>
+                        </label>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <h3 data-i18n="weight_curve">体重曲线</h3>
+                            <canvas id="weightChart"></canvas>
+                        </div>
+                        <div class="chart-wrapper">
+                            <h3 data-i18n="height_curve">身高曲线</h3>
+                            <canvas id="heightChart"></canvas>
+                        </div>
+                        <!-- Chart Information -->
+                        <div class="chart-info mb-4 mt-2">
+                            <p class="text-secondary small" data-i18n="who_growth_note">以上生长曲线基于世界卫生组织 (WHO) 标准生长曲线数据。参考曲线显示了婴幼儿在不同年龄段的第3、第15、第50、第85和第97百分位体重和身高数据。</p>
+                            <div class="percentile-legend mt-2">
+                                <div class="d-flex flex-wrap justify-content-center align-items-center">
+                                    <div class="legend-item me-3 mb-1">
+                                        <span class="legend-color" style="background-color: #E74C3C;"></span>
+                                        <span class="legend-text" data-i18n="percentile_3">3rd Percentile</span>
+                                    </div>
+                                    <div class="legend-item me-3 mb-1">
+                                        <span class="legend-color" style="background-color: #E67E22;"></span>
+                                        <span class="legend-text" data-i18n="percentile_15">15th Percentile</span>
+                                    </div>
+                                    <div class="legend-item me-3 mb-1">
+                                        <span class="legend-color" style="background-color: #2ECC71;"></span>
+                                        <span class="legend-text" data-i18n="percentile_50">50th Percentile</span>
+                                    </div>
+                                    <div class="legend-item me-3 mb-1">
+                                        <span class="legend-color" style="background-color: #3498DB;"></span>
+                                        <span class="legend-text" data-i18n="percentile_85">85th Percentile</span>
+                                    </div>
+                                    <div class="legend-item mb-1">
+                                        <span class="legend-color" style="background-color: #9B59B6;"></span>
+                                        <span class="legend-text" data-i18n="percentile_97">97th Percentile</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右边数据记录区域 -->
+                <div class="data-panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 data-i18n="baby_info">宝宝信息</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="babyBirthdate" data-i18n="baby_birthdate">宝宝出生日期</label>
+                                <input type="date" id="babyBirthdate" class="form-control" required>
+                            </div>
+                            <button id="saveBabyInfoBtn" class="btn btn-primary" data-i18n="save_info">保存信息</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 1rem;">
+                        <div class="card-header">
+                            <h2 data-i18n="data_record">数据记录</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="recordDate" data-i18n="record_date">记录日期</label>
+                                <input type="date" id="recordDate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="weightInput" data-i18n="weight_kg">体重 (kg)</label>
+                                <input type="number" id="weightInput" class="form-control" step="0.1" min="0" max="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="heightInput" data-i18n="height_cm">身高 (cm)</label>
+                                <input type="number" id="heightInput" class="form-control" step="0.1" min="0" max="150">
+                            </div>
+                            <button id="saveDataBtn" class="btn btn-primary" data-i18n="save_data">保存数据</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 1rem;">
+                        <div class="card-header">
+                            <h2 data-i18n="data_record">数据记录</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-i18n="date">日期</th>
+                                            <th data-i18n="weight_kg">体重 (kg)</th>
+                                            <th data-i18n="height_cm">身高 (cm)</th>
+                                            <th data-i18n="actions">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bodyDataTable">
+                                        <!-- 数据行将由JavaScript动态添加 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 1rem;">
+                        <div class="card-header">
+                            <h2 data-i18n="cancel_record">取消记录</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="cancelReason" data-i18n="cancel_reason">取消原因</label>
+                                <textarea id="cancelReason" class="form-control" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="confirm_signature">确认签名</label>
+                                <div class="signature-pad-container">
+                                    <canvas id="signatureCanvas"></canvas>
+                                </div>
+                                <button id="clearSignatureBtn" class="btn btn-text" data-i18n="clear_signature">清除签名</button>
+                            </div>
+                            <button id="submitCancellationBtn" class="btn btn-danger" data-i18n="submit_cancellation">提交取消请求</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 引入 Chart.js 和 SignaturePad -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script>
+        // DOM Elements
+        let weightChart, heightChart, signaturePad;
+        let sampleData = [];
+        let selectedGender = 'male';
+        
+        // Initialize the charts function
+        function initializeCharts() {
+            try {
+                const weightCanvas = document.getElementById('weightChart');
+                const heightCanvas = document.getElementById('heightChart');
+                
+                if (!weightCanvas || !heightCanvas) {
+                    console.error('Chart canvases not found');
+                    return;
+                }
+                
+                // Set global Chart.js defaults
+                Chart.defaults.font.family = "'Poppins', 'sans-serif'";
+                Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
+                
+                // Common chart configuration options
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    backgroundColor: 'rgba(240, 240, 240, 0.2)',
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            adapters: {
+                                date: {
+                                    locale: 'en'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: typeof i18n !== 'undefined' ? i18n.t('age_months') : '年龄（月）',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(150, 150, 150, 0.3)',
+                                display: true,
+                                drawBorder: true,
+                                drawOnChartArea: true,
+                                drawTicks: true,
+                                tickColor: 'rgba(150, 150, 150, 0.5)',
+                                borderColor: 'rgba(150, 150, 150, 0.5)',
+                                borderWidth: 1
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                autoSkipPadding: 20
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(150, 150, 150, 0.5)',
+                                display: true,
+                                drawBorder: true,
+                                drawOnChartArea: true,
+                                drawTicks: true,
+                                tickColor: 'rgba(150, 150, 150, 0.5)',
+                                borderColor: 'rgba(150, 150, 150, 0.5)',
+                                borderWidth: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            position: 'top',
+                            padding: {
+                                top: 10,
+                                bottom: 10
+                            },
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        subtitle: {
+                            display: true,
+                            position: 'top',
+                            text: typeof i18n !== 'undefined' ? i18n.t('birth_to_2_years') : '从出生到2岁（百分位）',
+                            padding: {
+                                top: 0,
+                                bottom: 10
+                            },
+                            font: {
+                                size: 14,
+                                weight: 'normal'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15,
+                                usePointStyle: true,
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary'),
+                            titleColor: getComputedStyle(document.documentElement).getPropertyValue('--text-primary'),
+                            bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'),
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border-color'),
+                            borderWidth: 1,
+                            displayColors: true
+                        }
+                    }
+                };
+                
+                // 初始化体重图表
+                const weightOptions = JSON.parse(JSON.stringify(commonOptions)); // Deep copy
+                weightOptions.plugins.title.text = typeof i18n !== 'undefined' ? i18n.t('weight_for_age_boys') : '男孩按年龄计算的体重';
+                weightOptions.scales.y.title.text = typeof i18n !== 'undefined' ? i18n.t('weight_kg') : '体重 (kg)';
+                // 设置体重图表Y轴范围
+                weightOptions.scales.y.min = 0;
+                weightOptions.scales.y.max = 16;
+                weightOptions.scales.y.ticks = {
+                    stepSize: 1  // 刻度间隔为1kg
+                };
+                
+                weightChart = new Chart(weightCanvas, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: typeof i18n !== 'undefined' ? i18n.t('weight_kg') : '体重 (kg)',
+                                data: [],
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary'),
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary'),
+                                tension: 0.3,
+                                pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary'),
+                                pointBorderColor: '#fff',
+                                pointRadius: 7,
+                                pointHoverRadius: 9,
+                                pointStyle: 'circle',
+                                pointBorderWidth: 2,
+                                order: 1,
+                                borderWidth: 0,  // 移除线条
+                                showLine: false  // 不显示线条
+                            }
+                        ]
+                    },
+                    options: weightOptions
+                });
+                
+                // 初始化身高图表
+                const heightOptions = JSON.parse(JSON.stringify(commonOptions)); // Deep copy
+                heightOptions.plugins.title.text = typeof i18n !== 'undefined' ? i18n.t('height_for_age_boys') : '男孩按年龄计算的身高';
+                heightOptions.scales.y.title.text = typeof i18n !== 'undefined' ? i18n.t('height_cm') : '身高 (cm)';
+                // 设置身高图表Y轴范围
+                heightOptions.scales.y.min = 40;
+                heightOptions.scales.y.max = 110;
+                heightOptions.scales.y.ticks = {
+                    stepSize: 5   // 刻度间隔为5cm
+                };
+                
+                heightChart = new Chart(heightCanvas, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: typeof i18n !== 'undefined' ? i18n.t('height_cm') : '身高 (cm)',
+                                data: [],
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary'),
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary'),
+                                tension: 0.3,
+                                pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary'),
+                                pointBorderColor: '#fff',
+                                pointRadius: 7,
+                                pointHoverRadius: 9,
+                                pointStyle: 'circle',
+                                pointBorderWidth: 2,
+                                order: 1,
+                                borderWidth: 0,  // 移除线条
+                                showLine: false  // 不显示线条
+                            }
+                        ]
+                    },
+                    options: heightOptions
+                });
+                
+                console.log('Charts initialized successfully');
+            } catch (error) {
+                console.error('Error initializing charts:', error);
+            }
+        }
+        
+        // Update theme for charts
+        function updateChartsTheme() {
+            if (weightChart && heightChart) {
+                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
+                const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid');
+                const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary');
+                const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary');
+                
+                Chart.defaults.color = textColor;
+                
+                weightChart.options.scales.x.grid.color = gridColor;
+                weightChart.options.scales.y.grid.color = gridColor;
+                weightChart.data.datasets[0].backgroundColor = primaryColor;
+                weightChart.data.datasets[0].borderColor = primaryColor;
+                weightChart.data.datasets[0].pointBackgroundColor = primaryColor;
+                
+                heightChart.options.scales.x.grid.color = gridColor;
+                heightChart.options.scales.y.grid.color = gridColor;
+                heightChart.data.datasets[0].backgroundColor = secondaryColor;
+                heightChart.data.datasets[0].borderColor = secondaryColor;
+                heightChart.data.datasets[0].pointBackgroundColor = secondaryColor;
+                
+                weightChart.update();
+                heightChart.update();
+            }
+        }
+        
+        // Toggle sidebar
+        function toggleSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                if (sidebar && dashboardContainer) {
+                    sidebar.classList.toggle('collapsed');
+                    dashboardContainer.classList.toggle('sidebar-collapsed');
+                    
+                    // Update the button icon
+                    const icon = document.querySelector('.sidebar-toggle i');
+                    if (icon) {
+                        if (sidebar.classList.contains('collapsed')) {
+                            icon.className = 'fas fa-chevron-right';
+                        } else {
+                            icon.className = 'fas fa-chevron-left';
+                        }
+                    }
+                    
+                    // Save sidebar state to localStorage
+                    localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+                }
+            } catch (error) {
+                console.error('Error toggling sidebar:', error);
+            }
+        }
+        
+        // Initialize sidebar state from localStorage
+        function initializeSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                
+                if (sidebar && dashboardContainer && isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    dashboardContainer.classList.add('sidebar-collapsed');
+                    
+                    // Update the button icon
+                    const icon = document.querySelector('.sidebar-toggle i');
+                    if (icon) {
+                        icon.className = 'fas fa-chevron-right';
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing sidebar:', error);
+            }
+        }
+        
+        // Update theme icon
+        function updateThemeIcon() {
+            try {
+                const themeIcon = document.querySelector('.theme-switch i');
+                const themeText = document.querySelector('.theme-switch span');
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                
+                if (themeIcon && themeText) {
+                    if (currentTheme === 'dark') {
+                        themeIcon.className = 'fas fa-sun';
+                        themeText.setAttribute('data-i18n', 'light_mode');
+                        themeText.textContent = typeof i18n !== 'undefined' ? i18n.t('light_mode') : '明亮模式';
+                    } else {
+                        themeIcon.className = 'fas fa-moon';
+                        themeText.setAttribute('data-i18n', 'dark_mode');
+                        themeText.textContent = typeof i18n !== 'undefined' ? i18n.t('dark_mode') : '暗黑模式';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating theme icon:', error);
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            let container = document.querySelector('.notification-container');
+            
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'notification-container';
+                document.body.appendChild(container);
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            
+            const icon = document.createElement('i');
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            
+            const text = document.createElement('span');
+            text.textContent = message;
+            
+            notification.appendChild(icon);
+            notification.appendChild(text);
+            container.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => {
+                    container.removeChild(notification);
+                    if (container.children.length === 0) {
+                        document.body.removeChild(container);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Fetch data from API
+        async function fetchData() {
+            try {
+                // 从localStorage加载已保存的数据
+                const savedData = localStorage.getItem('bodyData');
+                sampleData = savedData ? JSON.parse(savedData) : [];
+                
+                // Load data into table
+                loadBodyDataTable(sampleData);
+                
+                // Update charts
+                updateCharts(getSelectedRange());
+                
+                return sampleData;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return [];
+            }
+        }
+        
+        // Load body data table
+        function loadBodyDataTable(data) {
+            try {
+                const bodyDataTable = document.getElementById('bodyDataTable');
+                if (!bodyDataTable) return;
+                
+                bodyDataTable.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `<td colspan="4" class="text-center">${typeof i18n !== 'undefined' ? i18n.t('no_data') : '无数据'}</td>`;
+                    bodyDataTable.appendChild(emptyRow);
+                    return;
+                }
+                
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    // Format the date for display
+                    const formattedDate = formatDate(item.date);
+                    
+                    // Format weight and height, showing dash for missing values
+                    const weightDisplay = item.weight !== null && item.weight !== undefined ? item.weight : '—';
+                    const heightDisplay = item.height !== null && item.height !== undefined ? item.height : '—';
+                    
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td>${weightDisplay}</td>
+                        <td>${heightDisplay}</td>
+                        <td>
+                            <button class="btn-edit" data-id="${item.id}" title="${typeof i18n !== 'undefined' ? i18n.t('edit') : '编辑'}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" data-id="${item.id}" title="${typeof i18n !== 'undefined' ? i18n.t('delete') : '删除'}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    bodyDataTable.appendChild(row);
+                    
+                    // Add event listeners for edit and delete buttons
+                    const editBtn = row.querySelector('.btn-edit');
+                    const deleteBtn = row.querySelector('.btn-delete');
+                    
+                    if (editBtn) {
+                        editBtn.addEventListener('click', () => {
+                            editBodyData(item.id);
+                        });
+                    }
+                    
+                    if (deleteBtn) {
+                        deleteBtn.addEventListener('click', () => {
+                            deleteBodyData(item.id);
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading body data table:', error);
+            }
+        }
+        
+        // Format date with i18n
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                
+                if (isNaN(date.getTime())) {
+                    console.error('Invalid date:', dateString);
+                    return dateString; // Return original string if date is invalid
+                }
+                
+                if (typeof i18n !== 'undefined' && i18n.formatDate) {
+                    return i18n.formatDate(date);
+                }
+                
+                // Default to locale date format
+                const locale = typeof i18n !== 'undefined' ? i18n.currentLocale : 'zh-CN';
+                return date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (error) {
+                console.error('Error formatting date:', error);
+                return dateString; // Return original string on error
+            }
+        }
+        
+        // Update charts
+        function updateCharts(range) {
+            try {
+                if (!weightChart || !heightChart) {
+                    console.error('Charts not initialized');
+                    return;
+                }
+                
+                // 获取宝宝出生日期
+                const babyBirthdate = getBabyBirthdate();
+                
+                // 获取当前日期，用于计算图表范围
+                const today = new Date();
+                
+                // 计算宝宝的月龄
+                const ageMonths = (today.getFullYear() - babyBirthdate.getFullYear()) * 12 
+                                + today.getMonth() - babyBirthdate.getMonth();
+                
+                // Filter data based on range
+                const filteredData = filterDataByRange(sampleData, range);
+                
+                // Clear existing data
+                weightChart.data.datasets[0].data = [];
+                heightChart.data.datasets[0].data = [];
+                
+                // Add data points to charts - filter out null values
+                filteredData.forEach(item => {
+                    const date = new Date(item.date);
+                    
+                    // Only add weight data if it exists
+                    if (item.weight !== null && item.weight !== undefined) {
+                        weightChart.data.datasets[0].data.push({
+                            x: date,
+                            y: item.weight
+                        });
+                    }
+                    
+                    // Only add height data if it exists
+                    if (item.height !== null && item.height !== undefined) {
+                        heightChart.data.datasets[0].data.push({
+                            x: date,
+                            y: item.height
+                        });
+                    }
+                });
+                
+                // Add standard growth curves
+                const showGrowthCurves = true; // You can make this a setting
+                if (showGrowthCurves) {
+                    loadStandardGrowthCurves();
+                }
+                
+                // 设置图表的X轴范围，从出生日期到当前日期再加3个月的余量
+                const minDate = new Date(babyBirthdate);
+                const maxDate = new Date(today);
+                maxDate.setMonth(maxDate.getMonth() + 3); // 增加3个月的余量
+                
+                // 更新体重图表的X轴范围
+                weightChart.options.scales.x.min = minDate;
+                weightChart.options.scales.x.max = maxDate;
+                
+                // 更新身高图表的X轴范围
+                heightChart.options.scales.x.min = minDate;
+                heightChart.options.scales.x.max = maxDate;
+                
+                // Update the charts
+                weightChart.update();
+                heightChart.update();
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
+        }
+        
+        // Filter data by range
+        function filterDataByRange(data, range) {
+            // 永远包含全部数据，忽略日期范围筛选
+            return data;
+            
+            /* 
+            // 以下代码暂时不使用，保留原始筛选实现参考
+            const now = new Date();
+            let startDate;
+            
+            switch (range) {
+                case '1m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                    break;
+                case '3m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                    break;
+                case '6m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+                    break;
+                case '1y':
+                    startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                    break;
+                default:
+                    return data;
+            }
+            
+            return data.filter(item => new Date(item.date) >= startDate);
+            */
+        }
+        
+        // Load standard growth curves
+        function loadStandardGrowthCurves() {
+            try {
+                // Get the baby's birthdate 
+                const babyBirthdate = getBabyBirthdate();
+                
+                // WHO标准生长曲线数据（0-24个月）
+                // 数据格式: 月龄, 3rd percentile, 15th percentile, 50th percentile (median), 85th percentile, 97th percentile
+                const whoWeightBoys = [
+                    // [月龄, 3rd, 15th, 50th, 85th, 97th] (kg)
+                    [0, 2.5, 2.9, 3.3, 3.7, 4.3],
+                    [1, 3.4, 3.9, 4.5, 5.1, 5.7],
+                    [2, 4.3, 4.9, 5.6, 6.3, 7.0],
+                    [3, 5.0, 5.7, 6.4, 7.2, 8.0],
+                    [4, 5.6, 6.2, 7.0, 7.8, 8.7],
+                    [5, 6.0, 6.7, 7.5, 8.4, 9.3],
+                    [6, 6.4, 7.1, 7.9, 8.8, 9.8],
+                    [7, 6.7, 7.4, 8.3, 9.2, 10.3],
+                    [8, 7.0, 7.7, 8.6, 9.6, 10.7],
+                    [9, 7.2, 8.0, 8.9, 9.9, 11.0],
+                    [10, 7.5, 8.2, 9.2, 10.2, 11.4],
+                    [11, 7.7, 8.4, 9.4, 10.5, 11.7],
+                    [12, 7.8, 8.6, 9.6, 10.8, 12.0],
+                    [15, 8.3, 9.2, 10.3, 11.5, 12.8],
+                    [18, 8.8, 9.6, 10.9, 12.2, 13.6],
+                    [21, 9.2, 10.1, 11.5, 12.9, 14.4],
+                    [24, 9.7, 10.6, 12.0, 13.6, 15.2]
+                ];
+
+                const whoHeightBoys = [
+                    // [月龄, 3rd, 15th, 50th, 85th, 97th] (cm)
+                    [0, 46.3, 48.0, 49.9, 51.8, 53.4],
+                    [1, 51.1, 52.8, 54.7, 56.7, 58.4],
+                    [2, 54.7, 56.4, 58.4, 60.4, 62.2],
+                    [3, 57.6, 59.4, 61.4, 63.5, 65.4],
+                    [4, 60.0, 61.8, 63.9, 66.0, 68.0],
+                    [5, 61.9, 63.8, 65.9, 68.0, 70.1],
+                    [6, 63.6, 65.5, 67.6, 69.8, 71.9],
+                    [7, 65.1, 67.0, 69.2, 71.3, 73.5],
+                    [8, 66.5, 68.4, 70.6, 72.8, 75.0],
+                    [9, 67.7, 69.7, 72.0, 74.2, 76.5],
+                    [10, 69.0, 70.9, 73.3, 75.6, 77.9],
+                    [11, 70.1, 72.1, 74.5, 76.9, 79.2],
+                    [12, 71.2, 73.2, 75.7, 78.1, 80.5],
+                    [15, 74.0, 76.0, 78.6, 81.2, 83.7],
+                    [18, 76.3, 78.4, 81.2, 83.9, 86.5],
+                    [21, 78.4, 80.6, 83.5, 86.3, 89.0],
+                    [24, 80.3, 82.5, 85.6, 88.5, 91.3]
+                ];
+
+                const whoWeightGirls = [
+                    // [月龄, 3rd, 15th, 50th, 85th, 97th] (kg)
+                    [0, 2.4, 2.8, 3.2, 3.6, 4.2],
+                    [1, 3.2, 3.6, 4.2, 4.8, 5.4],
+                    [2, 3.9, 4.5, 5.1, 5.8, 6.5],
+                    [3, 4.5, 5.1, 5.8, 6.6, 7.4],
+                    [4, 5.0, 5.6, 6.4, 7.3, 8.1],
+                    [5, 5.4, 6.1, 6.9, 7.8, 8.7],
+                    [6, 5.7, 6.4, 7.3, 8.2, 9.2],
+                    [7, 6.0, 6.7, 7.6, 8.6, 9.6],
+                    [8, 6.2, 7.0, 7.9, 9.0, 10.0],
+                    [9, 6.5, 7.3, 8.2, 9.3, 10.4],
+                    [10, 6.7, 7.5, 8.5, 9.6, 10.7],
+                    [11, 6.9, 7.7, 8.7, 9.9, 11.0],
+                    [12, 7.0, 7.9, 8.9, 10.1, 11.3],
+                    [15, 7.6, 8.5, 9.6, 10.9, 12.3],
+                    [18, 8.1, 9.1, 10.2, 11.6, 13.1],
+                    [21, 8.6, 9.6, 10.9, 12.3, 13.9],
+                    [24, 9.0, 10.2, 11.5, 13.0, 14.6]
+                ];
+
+                const whoHeightGirls = [
+                    // [月龄, 3rd, 15th, 50th, 85th, 97th] (cm)
+                    [0, 45.4, 47.0, 49.1, 51.1, 52.7],
+                    [1, 49.8, 51.5, 53.7, 55.8, 57.6],
+                    [2, 53.0, 54.9, 57.1, 59.3, 61.1],
+                    [3, 55.6, 57.5, 59.8, 62.1, 64.0],
+                    [4, 57.8, 59.7, 62.1, 64.5, 66.4],
+                    [5, 59.6, 61.6, 64.0, 66.4, 68.5],
+                    [6, 61.2, 63.2, 65.7, 68.2, 70.3],
+                    [7, 62.7, 64.7, 67.3, 69.9, 72.0],
+                    [8, 64.0, 66.1, 68.7, 71.4, 73.5],
+                    [9, 65.3, 67.4, 70.1, 72.8, 75.0],
+                    [10, 66.5, 68.6, 71.5, 74.2, 76.4],
+                    [11, 67.7, 69.8, 72.8, 75.5, 77.8],
+                    [12, 68.9, 71.0, 74.0, 76.9, 79.2],
+                    [15, 71.9, 74.1, 77.3, 80.2, 82.6],
+                    [18, 74.4, 76.7, 80.0, 83.0, 85.5],
+                    [21, 76.6, 79.0, 82.4, 85.5, 88.1],
+                    [24, 78.6, 81.1, 84.5, 87.7, 90.4]
+                ];
+                
+                // 选择基于性别的数据
+                const weightData = selectedGender === 'male' ? whoWeightBoys : whoWeightGirls;
+                const heightData = selectedGender === 'male' ? whoHeightBoys : whoHeightGirls;
+                
+                // 为每个百分位数创建数据集
+                const standardWeightCurves = [[], [], [], [], []]; // 3rd, 15th, 50th, 85th, 97th
+                const standardHeightCurves = [[], [], [], [], []]; // 3rd, 15th, 50th, 85th, 97th
+                
+                // 基于婴儿出生日期生成标准曲线
+                weightData.forEach(entry => {
+                    const ageMonths = entry[0];
+                    const date = new Date(babyBirthdate);
+                    date.setMonth(date.getMonth() + ageMonths);
+                    
+                    // 添加各个百分位数的数据点
+                    for (let i = 0; i < 5; i++) {
+                        standardWeightCurves[i].push({
+                            x: date,
+                            y: entry[i + 1]
+                        });
+                    }
+                });
+                
+                heightData.forEach(entry => {
+                    const ageMonths = entry[0];
+                    const date = new Date(babyBirthdate);
+                    date.setMonth(date.getMonth() + ageMonths);
+                    
+                    // 添加各个百分位数的数据点
+                    for (let i = 0; i < 5; i++) {
+                        standardHeightCurves[i].push({
+                            x: date,
+                            y: entry[i + 1]
+                        });
+                    }
+                });
+                
+                // 确保我们有足够的数据集用于不同的百分位数线
+                while (weightChart.data.datasets.length < 6) { // 1个用于实际数据，5个用于百分位数线
+                    weightChart.data.datasets.push({
+                        data: [],
+                        borderColor: 'rgba(150, 150, 150, 0.5)',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        fill: false
+                    });
+                }
+                
+                while (heightChart.data.datasets.length < 6) { // 1个用于实际数据，5个用于百分位数线
+                    heightChart.data.datasets.push({
+                        data: [],
+                        borderColor: 'rgba(150, 150, 150, 0.5)',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        fill: false
+                    });
+                }
+                
+                // 更新图表数据集标签
+                const percentileLabels = [
+                    typeof i18n !== 'undefined' ? i18n.t('percentile_3') : '3rd Percentile',
+                    typeof i18n !== 'undefined' ? i18n.t('percentile_15') : '15th Percentile',
+                    typeof i18n !== 'undefined' ? i18n.t('percentile_50') : '50th Percentile',
+                    typeof i18n !== 'undefined' ? i18n.t('percentile_85') : '85th Percentile',
+                    typeof i18n !== 'undefined' ? i18n.t('percentile_97') : '97th Percentile'
+                ];
+                
+                // 百分位曲线的颜色
+                const percentileColors = [
+                    '#E74C3C', // 3rd - 红色
+                    '#E67E22', // 15th - 橙色
+                    '#2ECC71', // 50th - 绿色
+                    '#3498DB', // 85th - 蓝色
+                    '#9B59B6'  // 97th - 紫色
+                ];
+                
+                // 设置每个百分位曲线的样式
+                for (let i = 0; i < 5; i++) {
+                    // 体重图表曲线样式
+                    weightChart.data.datasets[i+1].label = percentileLabels[i];
+                    weightChart.data.datasets[i+1].borderColor = percentileColors[i];
+                    weightChart.data.datasets[i+1].borderWidth = (i === 2) ? 2 : 1.5; // 50th百分位线更粗
+                    weightChart.data.datasets[i+1].borderDash = (i === 2) ? [] : [3, 3]; // 50th百分位线为实线，其他为虚线
+                    
+                    // 身高图表曲线样式
+                    heightChart.data.datasets[i+1].label = percentileLabels[i];
+                    heightChart.data.datasets[i+1].borderColor = percentileColors[i];
+                    heightChart.data.datasets[i+1].borderWidth = (i === 2) ? 2 : 1.5;
+                    heightChart.data.datasets[i+1].borderDash = (i === 2) ? [] : [3, 3];
+                }
+                
+                // 添加百分位曲线到图表
+                for (let i = 0; i < 5; i++) {
+                    weightChart.data.datasets[i+1].data = standardWeightCurves[i];
+                    heightChart.data.datasets[i+1].data = standardHeightCurves[i];
+                }
+                
+                // 更新图表注释文本
+                const chartInfo = document.querySelector('.chart-info p');
+                if (chartInfo) {
+                    chartInfo.textContent = typeof i18n !== 'undefined' ? 
+                        i18n.t('who_growth_note') : 
+                        '以上生长曲线基于世界卫生组织 (WHO) 标准生长曲线数据。参考曲线显示了婴幼儿在不同年龄段的第3、第15、第50、第85和第97百分位体重和身高数据。';
+                }
+                
+            } catch (error) {
+                console.error('Error loading standard growth curves:', error);
+            }
+        }
+        
+        // Load demo data
+        function loadDemoData() {
+            try {
+                // Use the fetchData function to load sample data
+                fetchData();
+                
+                console.log('Demo data loaded successfully');
+            } catch (error) {
+                console.error('Error loading demo data:', error);
+            }
+        }
+        
+        // Save data
+        function saveData() {
+            try {
+                const recordDate = document.getElementById('recordDate').value;
+                const weightInput = document.getElementById('weightInput');
+                const heightInput = document.getElementById('heightInput');
+                const weight = weightInput.value ? parseFloat(weightInput.value) : null;
+                const height = heightInput.value ? parseFloat(heightInput.value) : null;
+                
+                // Validate inputs - at least one of weight or height must be provided
+                if (!recordDate || (weight === null && height === null) || 
+                    (weight !== null && isNaN(weight)) || 
+                    (height !== null && isNaN(height))) {
+                    const errorMessage = typeof i18n !== 'undefined' ? 
+                        i18n.t('please_fill_date_and_at_least_one_measurement') : 
+                        '请填写日期和至少一项测量值（体重或身高）';
+                    alert(errorMessage);
+                    return;
+                }
+                
+                const saveDataBtn = document.getElementById('saveDataBtn');
+                const mode = saveDataBtn.getAttribute('data-mode') || 'add';
+                
+                if (mode === 'edit') {
+                    const id = saveDataBtn.getAttribute('data-id');
+                    // In a real app, you would call an API to update the data
+                    console.log(`Updating record with ID: ${id}`);
+                    
+                    // For demo purposes, update the item in the sample data
+                    const itemIndex = sampleData.findIndex(d => d.id == id);
+                    if (itemIndex !== -1) {
+                        // Keep existing values if not provided
+                        if (weight === null) {
+                            weight = sampleData[itemIndex].weight;
+                        }
+                        if (height === null) {
+                            height = sampleData[itemIndex].height;
+                        }
+                        sampleData[itemIndex] = { id: parseInt(id), date: recordDate, weight, height };
+                    }
+                } else {
+                    // In a real app, you would call an API to save the data
+                    console.log('Saving new record');
+                    
+                    // For demo purposes, add to sample data
+                    const newId = sampleData.length > 0 ? Math.max(...sampleData.map(d => d.id)) + 1 : 1;
+                    sampleData.push({ id: newId, date: recordDate, weight, height });
+                }
+                
+                // Reset form
+                document.getElementById('recordDate').value = '';
+                document.getElementById('weightInput').value = '';
+                document.getElementById('heightInput').value = '';
+                
+                // Reset save button
+                saveDataBtn.textContent = typeof i18n !== 'undefined' ? i18n.t('save_data') : '保存数据';
+                saveDataBtn.removeAttribute('data-mode');
+                saveDataBtn.removeAttribute('data-id');
+                
+                // Reload table and update charts
+                loadBodyDataTable(sampleData);
+                updateCharts(getSelectedRange());
+                
+                // 保存数据到localStorage
+                localStorage.setItem('bodyData', JSON.stringify(sampleData));
+                
+                // Show success notification
+                const dataSavedMessage = typeof i18n !== 'undefined' ? i18n.t('data_saved') : '数据保存成功';
+                showNotification(dataSavedMessage, 'success');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                const errorMessage = typeof i18n !== 'undefined' ? i18n.t('error_saving_data') : '保存数据时出错';
+                showNotification(errorMessage, 'error');
+            }
+        }
+        
+        // Edit body data
+        function editBodyData(id) {
+            try {
+                const item = sampleData.find(d => d.id == id);
+                if (!item) return;
+                
+                // Fill the form with the data
+                document.getElementById('recordDate').value = item.date;
+                document.getElementById('weightInput').value = item.weight;
+                document.getElementById('heightInput').value = item.height;
+                
+                // Change save button to update
+                const saveDataBtn = document.getElementById('saveDataBtn');
+                saveDataBtn.textContent = typeof i18n !== 'undefined' ? i18n.t('update_data') : '更新数据';
+                saveDataBtn.setAttribute('data-mode', 'edit');
+                saveDataBtn.setAttribute('data-id', id);
+                
+                // Scroll to form
+                document.getElementById('recordDate').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error editing data:', error);
+            }
+        }
+        
+        // Delete body data
+        function deleteBodyData(id) {
+            try {
+                // Use i18n translated confirmation message
+                const confirmMessage = typeof i18n !== 'undefined' ? i18n.t('confirm_delete') : '确定要删除这条记录吗?';
+                
+                if (confirm(confirmMessage)) {
+                    // In a real app, you would call an API to delete the data
+                    console.log(`Deleting record with ID: ${id}`);
+                    
+                    // For demo purposes, filter out the deleted item
+                    const newData = sampleData.filter(d => d.id != id);
+                    sampleData = newData;
+                    
+                    // Update table and charts
+                    loadBodyDataTable(newData);
+                    updateCharts(getSelectedRange());
+                    
+                    // 更新localStorage
+                    localStorage.setItem('bodyData', JSON.stringify(sampleData));
+                    
+                    // Show success notification
+                    const deleteMessage = typeof i18n !== 'undefined' ? i18n.t('data_deleted') : '数据已删除';
+                    showNotification(deleteMessage, 'success');
+                }
+            } catch (error) {
+                console.error('Error deleting data:', error);
+                const errorMessage = typeof i18n !== 'undefined' ? i18n.t('error_deleting_data') : '删除数据时出错';
+                showNotification(errorMessage, 'error');
+            }
+        }
+        
+        // Get selected date range
+        function getSelectedRange() {
+            const activeButton = document.querySelector('.date-btn.active');
+            return activeButton ? activeButton.getAttribute('data-range') : '1m';
+        }
+        
+        // Toggle theme
+        function toggleTheme() {
+            try {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                
+                updateThemeIcon();
+                updateChartsTheme();
+                
+                const themeChangedMessage = typeof i18n !== 'undefined' ? i18n.t('theme_changed') : '主题已更改';
+                showNotification(themeChangedMessage, 'success');
+            } catch (error) {
+                console.error('Error toggling theme:', error);
+            }
+        }
+        
+        // Submit cancellation
+        function submitCancellation() {
+            try {
+                const reason = document.getElementById('cancelReason').value;
+                
+                if (!reason) {
+                    const reasonError = typeof i18n !== 'undefined' ? i18n.t('please_provide_reason') : '请填写取消原因';
+                    alert(reasonError);
+                    return;
+                }
+                
+                if (signaturePad && signaturePad.isEmpty()) {
+                    const signatureError = typeof i18n !== 'undefined' ? i18n.t('please_confirm_with_signature') : '请签名确认';
+                    alert(signatureError);
+                    return;
+                }
+                
+                // In a real app, you would call an API to submit the cancellation
+                console.log('Submitting cancellation:');
+                console.log('Reason:', reason);
+                
+                if (signaturePad) {
+                    const signatureImage = signaturePad.toDataURL();
+                    console.log('Signature:', signatureImage.substring(0, 50) + '...');
+                }
+                
+                // Reset form
+                document.getElementById('cancelReason').value = '';
+                if (signaturePad) {
+                    signaturePad.clear();
+                }
+                
+                // Show success notification
+                const successMessage = typeof i18n !== 'undefined' ? i18n.t('cancellation_submitted') : '取消请求已提交';
+                showNotification(successMessage, 'success');
+            } catch (error) {
+                console.error('Error submitting cancellation:', error);
+                const errorMessage = typeof i18n !== 'undefined' ? i18n.t('error_submitting_cancellation') : '提交取消请求时出错';
+                showNotification(errorMessage, 'error');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize DOM element references
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const themeSwitch = document.querySelector('.theme-switch');
+            const dateButtons = document.querySelectorAll('.date-btn');
+            const genderInputs = document.querySelectorAll('input[name="gender"]');
+            const babyBirthdateInput = document.getElementById('babyBirthdate');
+            const saveBabyInfoBtn = document.getElementById('saveBabyInfoBtn');
+            const recordDateInput = document.getElementById('recordDate');
+            const weightInput = document.getElementById('weightInput');
+            const heightInput = document.getElementById('heightInput');
+            const saveDataBtn = document.getElementById('saveDataBtn');
+            const clearSignatureBtn = document.getElementById('clearSignatureBtn');
+            const submitCancellationBtn = document.getElementById('submitCancellationBtn');
+            const bodyDataTable = document.getElementById('bodyDataTable');
+            
+            // Initialize signature pad
+            const signatureCanvas = document.getElementById('signatureCanvas');
+            if (signatureCanvas) {
+                signaturePad = new SignaturePad(signatureCanvas);
+            }
+            
+            // Initialize theme and language
+            if (typeof i18n !== 'undefined') {
+                i18n.updatePageContent();
+            }
+            
+            // Load theme from localStorage
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateThemeIcon();
+            }
+            
+            // Initialize data tables and charts
+            initializeCharts();
+            
+            // Load baby information from localStorage
+            loadBabyInfo();
+            
+            // Load data from the API
+            fetchData();
+            
+            // Set up sidebar toggle
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleSidebar();
+                });
+            }
+            
+            // Initialize sidebar state
+            initializeSidebar();
+            
+            // Set up theme switch
+            if (themeSwitch) {
+                themeSwitch.addEventListener('click', toggleTheme);
+            }
+            
+            // Set up date range buttons
+            if (dateButtons) {
+                dateButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        dateButtons.forEach(btn => btn.classList.remove('active'));
+                        this.classList.add('active');
+                        updateCharts(this.getAttribute('data-range'));
+                    });
+                });
+            }
+            
+            // Set up gender selector
+            if (genderInputs) {
+                genderInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        selectedGender = this.value;
+                        localStorage.setItem('selectedGender', selectedGender);
+                        updateCharts(getSelectedRange());
+                    });
+                });
+                
+                // Initialize from localStorage
+                const savedGender = localStorage.getItem('selectedGender');
+                if (savedGender) {
+                    const genderInput = document.querySelector(`input[name="gender"][value="${savedGender}"]`);
+                    if (genderInput) {
+                        genderInput.checked = true;
+                        selectedGender = savedGender;
+                    }
+                }
+            }
+            
+            // Set up baby info save button
+            if (saveBabyInfoBtn) {
+                saveBabyInfoBtn.addEventListener('click', () => {
+                    const birthdate = babyBirthdateInput.value;
+                    
+                    if (!birthdate) {
+                        const errorMessage = typeof i18n !== 'undefined' ? i18n.t('please_enter_birthdate') : '请输入宝宝出生日期';
+                        alert(errorMessage);
+                        return;
+                    }
+                    
+                    // Save to localStorage
+                    localStorage.setItem('babyBirthdate', birthdate);
+                    
+                    // Show success notification
+                    const infoSavedMessage = typeof i18n !== 'undefined' ? i18n.t('baby_info_saved') : '宝宝信息保存成功';
+                    showNotification(infoSavedMessage, 'success');
+                    
+                    // Update charts with new birthdate
+                    updateCharts(getSelectedRange());
+                });
+            }
+            
+            // Set up save data button
+            if (saveDataBtn) {
+                saveDataBtn.addEventListener('click', saveData);
+            }
+            
+            // Set up clear signature button
+            if (clearSignatureBtn && signaturePad) {
+                clearSignatureBtn.addEventListener('click', () => {
+                    signaturePad.clear();
+                });
+            }
+            
+            // Set up submit cancellation button
+            if (submitCancellationBtn) {
+                submitCancellationBtn.addEventListener('click', submitCancellation);
+            }
+            
+            // Initialize date inputs
+            if (recordDateInput) {
+                recordDateInput.valueAsDate = new Date();
+            }
+            
+            // Load demo data
+            loadDemoData();
+        });
+        
+        // Load baby information from localStorage
+        function loadBabyInfo() {
+            const birthdate = localStorage.getItem('babyBirthdate');
+            const babyBirthdateInput = document.getElementById('babyBirthdate');
+            if (birthdate && babyBirthdateInput) {
+                babyBirthdateInput.value = birthdate;
+            }
+        }
+        
+        // Get baby birthdate
+        function getBabyBirthdate() {
+            const birthdate = localStorage.getItem('babyBirthdate');
+            if (birthdate) {
+                return new Date(birthdate);
+            }
+            
+            // 如果未设置出生日期，使用当前日期减去3个月作为默认值
+            const defaultDate = new Date();
+            defaultDate.setMonth(defaultDate.getMonth() - 3);
+            
+            // 添加提示信息告知用户设置正确的出生日期
+            const chartInfo = document.querySelector('.chart-info p');
+            if (chartInfo) {
+                chartInfo.innerHTML = '<strong style="color:var(--accent-warning)">请设置宝宝的正确出生日期以获取准确的生长曲线!</strong><br>' + chartInfo.innerHTML;
+            }
+            
+            return defaultDate;
+        }
+    </script>
+</body>
+</html> 

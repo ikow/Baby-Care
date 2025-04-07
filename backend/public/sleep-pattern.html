@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Pattern - Baby Care</title>
+    <!-- Add this script before any other scripts or styles -->
+    <script>
+        // Immediately apply theme, language, and sidebar state before page renders
+        (function() {
+            // Hide content until everything is initialized
+            document.documentElement.style.visibility = 'hidden';
+            
+            // Apply theme
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Apply language
+            const language = localStorage.getItem('language') || 'en';
+            document.documentElement.setAttribute('lang', language);
+            
+            // Add a class to prevent transitions during page load
+            document.documentElement.classList.add('no-transitions');
+
+            // Load translations synchronously
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/js/i18n/translations.js', false); // false makes it synchronous
+            xhr.send();
+            if (xhr.status === 200) {
+                eval(xhr.responseText);
+                // Initialize i18n immediately
+                if (typeof i18n !== 'undefined') {
+                    i18n.currentLocale = language;
+                }
+            }
+            
+            // Show content after a small delay to ensure everything is ready
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    document.documentElement.classList.remove('no-transitions');
+                    document.documentElement.style.visibility = 'visible';
+                }, 50);
+            });
+        })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="/js/i18n/translations.js"></script>
+    <!-- Add sidebar JS -->
+    <script src="/js/sidebar.js"></script>
+    <!-- Add sidebar CSS -->
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        /* Add this at the top of your styles */
+        .no-transitions * {
+            transition: none !important;
+        }
+
+        /* Theme Variables */
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1b1e;
+            --bg-secondary: #2a2b2f;
+            --bg-tertiary: #32333a;
+            --accent-primary: #64ffda;
+            --accent-secondary: #bb86fc;
+            --accent-warning: #ffb74d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --success: #00e676;
+            --danger: #ff5252;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+        }
+
+        :root[data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #e8e8e8;
+            --accent-primary: #00b894;
+            --accent-secondary: #6c5ce7;
+            --accent-warning: #f39c12;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: #dfe6e9;
+            --success: #00b894;
+            --danger: #d63031;
+            --gold: #f1c40f;
+            --silver: #95a5a6;
+            --bronze: #d35400;
+        }
+
+        /* Add global transition for theme changes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease,
+                      color 0.3s ease,
+                      border-color 0.3s ease,
+                      box-shadow 0.3s ease;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+        
+        .dashboard-container.sidebar-collapsed {
+            grid-template-columns: 80px 1fr;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--bg-secondary);
+            padding: 2rem 1rem;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease,
+                      background-color 0.3s ease,
+                      border-color 0.3s ease;
+            position: relative;
+            width: 250px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            overflow: visible;
+            height: 100vh; /* Ensure full height */
+        }
+
+        .sidebar nav {
+            flex: 1;
+            width: 100%;
+            margin-bottom: 2rem; /* Add space above theme switcher */
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            height: 60px;
+            width: 100%;
+        }
+
+        /* Logo icon styles */
+        .sidebar-logo i {
+            font-size: 2rem;
+            color: var(--accent-primary);
+            width: 32px;
+            text-align: center;
+            min-width: 32px; /* Prevent icon from shrinking */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 1rem;
+            right: -14px;
+            background: var(--accent-primary);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1), 2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--accent-secondary);
+            transform: scale(1.1);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+        }
+
+        /* Ensure logo stays centered when collapsed */
+        .sidebar.collapsed .sidebar-logo {
+            justify-content: center;
+            padding: 0 0.5rem 2rem 0.5rem;
+            width: 100%;
+        }
+
+        .sidebar.collapsed .sidebar-logo i {
+            margin: 0 auto;
+            min-width: 32px;
+        }
+
+        /* Prevent logo text from affecting layout when hidden */
+        .sidebar.collapsed .sidebar-logo h2 {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Nav items transition */
+        .nav-item span {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 1;
+            transform: translateX(0);
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+            transform: translateX(-20px);
+            position: absolute;
+            left: 100%;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 1rem 0;
+            transition: padding 0.3s ease;
+            width: auto;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease,
+                      background-color 0.3s ease,
+                      color 0.3s ease;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        /* Theme Switch */
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+            width: calc(100% - 2rem);
+        }
+
+        .theme-switch:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .theme-switch i {
+            font-size: 1rem;
+        }
+
+        /* Sleep Pattern Styles */
+        .sleep-pattern-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .week-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .week-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .week-nav-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-primary);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease,
+                      background-color 0.3s ease,
+                      color 0.3s ease,
+                      transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .week-nav-btn:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .week-display {
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .sleep-pattern-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .sleep-pattern-visualization {
+            width: 100%;
+            min-height: 600px;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sleep-pattern-chart {
+            width: 100%;
+            height: 100%;
+            max-height: 400px;
+            position: relative;
+        }
+
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease-out;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: rgba(0, 230, 118, 0.2);
+            border-left: 4px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(255, 82, 82, 0.2);
+            border-left: 4px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-warning {
+            background: rgba(255, 183, 77, 0.2);
+            border-left: 4px solid var(--accent-warning);
+            color: var(--accent-warning);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Summary div styling */
+        #sleepSummary {
+            margin-top: 1.25rem;
+            padding: 1.25rem;
+            background-color: var(--bg-tertiary);
+            border-radius: 10px;
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #sleepSummary h3 {
+            margin-bottom: 0.75rem;
+            color: var(--accent-primary);
+            font-size: 1.15rem;
+        }
+
+        #sleepSummary p {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        #sleepSummary p strong {
+            color: var(--accent-secondary);
+            margin-right: 0.5rem;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                padding: 0.5rem;
+                border-right: none;
+                border-top: 1px solid var(--border-color);
+                flex-direction: row;
+                justify-content: space-around;
+            }
+
+            .sidebar-logo, .sidebar-toggle, .theme-switch {
+                display: none;
+            }
+
+            .sidebar nav {
+                display: flex;
+                width: 100%;
+                margin: 0;
+            }
+
+            .nav-item {
+                flex-direction: column;
+                padding: 0.5rem;
+                margin: 0;
+                gap: 0.25rem;
+                font-size: 0.7rem;
+            }
+
+            .nav-item i {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding-bottom: 80px; /* Space for mobile nav */
+            }
+
+            .week-selector {
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+
+            .week-navigation {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .week-nav-btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
+            
+            .sleep-pattern-card {
+                padding: 1rem;
+            }
+            
+            .card-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* 添加sleepLegend样式确保其不会影响图表布局 */
+        #sleepLegend {
+            margin-top: 1rem;
+            position: relative;
+            width: 100%;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            z-index: 1;
+        }
+
+        /* 睡眠模式特定样式 */
+        .sleep-chart-wrapper {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            height: 600px;
+        }
+        
+        .sleep-block {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .sleep-block:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 5px rgba(100, 255, 218, 0.5);
+            z-index: 10;
+        }
+        
+        .time-axis {
+            min-width: 50px;
+        }
+        
+        .day-header {
+            font-size: 0.9rem;
+        }
+        
+        .time-grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--border-color);
+            opacity: 0.3;
+            z-index: 1;
+        }
+        
+        .day-column.today .day-header {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+        
+        /* 睡眠摘要样式 */
+        #sleepSummary {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background-color: var(--bg-tertiary);
+            border-radius: 10px;
+            color: var(--text-primary);
+        }
+        
+        #sleepSummary h3 {
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+            text-align: center;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .summary-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+        }
+        
+        .summary-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        /* 当前时间指示器样式 */
+        .current-time-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--danger);
+            z-index: 5;
+        }
+        
+        .current-time-label {
+            position: absolute;
+            right: 0;
+            top: -10px;
+            background-color: var(--danger);
+            color: white;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 0.7rem;
+        }
+        
+        @media (max-width: 768px) {
+            .sleep-chart-wrapper {
+                grid-template-columns: 40px repeat(7, 1fr);
+                height: 500px;
+                font-size: 0.8rem;
+            }
+            
+            .time-axis {
+                min-width: 40px;
+            }
+            
+            .day-header {
+                font-size: 0.75rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <button class="sidebar-toggle" id="sidebarToggleBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="sidebar-logo">
+                <i class="fas fa-baby"></i>
+                <h2 data-i18n="baby_care">Baby Care</h2>
+            </div>
+            <nav>
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span data-i18n="nav_dashboard">Dashboard</span>
+                </a>
+                <a href="statistics.html" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span data-i18n="nav_statistics">Statistics</span>
+                </a>
+                <a href="sleep-pattern.html" class="nav-item active">
+                    <i class="fas fa-moon"></i>
+                    <span data-i18n="nav_sleep_pattern">Sleep Pattern</span>
+                </a>
+                <a href="body-data.html" class="nav-item">
+                    <i class="fas fa-weight"></i>
+                    <span data-i18n="nav_body_data">Body Data</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span data-i18n="nav_settings">Settings</span>
+                </a>
+            </nav>
+            <!-- Theme Switch Button -->
+            <div class="theme-switch">
+                <i class="fas fa-moon"></i>
+                <span data-i18n="dark_mode">Dark Mode</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="sleep-pattern-container">
+                <div class="week-selector">
+                    <div class="week-navigation">
+                        <button class="week-nav-btn" onclick="navigateWeek('prev')">
+                            <i class="fas fa-chevron-left"></i>
+                            <span data-i18n="previous_week">Previous Week</span>
+                        </button>
+                        <button class="week-nav-btn" onclick="navigateWeek('this')">
+                            <i class="fas fa-calendar-day"></i>
+                            <span data-i18n="this_week">This Week</span>
+                        </button>
+                        <button class="week-nav-btn" onclick="navigateWeek('next')">
+                            <span data-i18n="next_week">Next Week</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="week-display" id="weekDisplay">
+                        <span data-i18n="week_of">Week of</span> <span id="weekStartDate">2023-05-01</span>
+                    </div>
+                </div>
+
+                <div class="sleep-pattern-card">
+                    <div class="card-header">
+                        <h2 class="card-title" data-i18n="sleep_pattern">Sleep Pattern</h2>
+                    </div>
+                    <div class="sleep-pattern-visualization">
+                        <canvas id="sleepChart" class="sleep-pattern-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add translation script before other scripts -->
+    <script src="js/i18n/translations.js"></script>
+    
+    <script>
+        // 全局变量
+        let currentWeekStart = null;
+        window.sleepChart = null;
+
+        // 常量定义
+        const TIME_ZONE = 'Asia/Bangkok'; // 使用 UTC+7 时区
+        const CHART_COLORS = {
+            shortSleep: 'rgba(100, 255, 218, 0.3)',
+            mediumSleep: 'rgba(100, 255, 218, 0.6)',
+            longSleep: 'rgba(100, 255, 218, 0.9)',
+            borderColor: 'rgba(75, 192, 192, 0.4)'
+        };
+
+        // 睡眠时长分类
+        const SLEEP_DURATION_CATEGORIES = {
+            SHORT: 30, // 30分钟以下为短睡眠
+            MEDIUM: 120 // 30-120分钟为中等睡眠，120分钟以上为长睡眠
+        };
+
+        const TIME_FORMAT_OPTIONS = {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: TIME_ZONE
+        };
+
+        const DATE_FORMAT_OPTIONS = {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            timeZone: TIME_ZONE
+        };
+
+        function formatTimeForDisplay(date) {
+            return date.toLocaleTimeString(i18n.locale, TIME_FORMAT_OPTIONS);
+        }
+
+        function formatDateForDisplay(date) {
+            return date.toLocaleDateString(i18n.locale, DATE_FORMAT_OPTIONS);
+        }
+
+        // 日志记录函数
+        function logToConsole(level, message, data = {}) {
+            if (!data) data = {};
+            
+            const timestamp = new Date().toISOString();
+            const logData = {
+                timestamp,
+                level,
+                message,
+                ...data
+            };
+            
+            switch (level) {
+                case 'error':
+                    console.error(`[${timestamp}] ${message}`, data);
+                    break;
+                case 'warn':
+                    console.warn(`[${timestamp}] ${message}`, data);
+                    break;
+                case 'info':
+                default:
+                    console.log(`[${timestamp}] ${message}`, data);
+            }
+            
+            // 可以在这里添加远程日志记录功能
+            return logData;
+        }
+
+        // Initialize the app
+        async function initializeApp() {
+            try {
+                // 设置当前周
+                setCurrentWeekToThisWeek();
+                
+                // 加载睡眠数据
+                await loadSleepData();
+                
+                // 设置事件监听器
+                setupEventListeners();
+                
+                // 更新图表主题
+                if (typeof updateChartsTheme === 'function') {
+                    updateChartsTheme();
+                }
+                
+                console.log('App initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                showNotification(i18n.t('initialization_failed'), 'error');
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('Initializing page...');
+                // Initialize i18n
+                i18n.init();
+                // 初始化主题和侧边栏
+                initializeTheme();
+                initializeSidebar();
+                
+                // 添加侧边栏切换按钮事件处理
+                const toggleBtn = document.querySelector('.sidebar-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        toggleSidebar(e);
+                    });
+                }
+                
+                // Current date and time
+                const now = new Date();
+                // Set current week
+                setCurrentWeekToThisWeek();
+                
+                // 初始化全局图表变量
+                window.sleepChart = null;
+                
+                // 检查Chart.js是否已加载
+                if (typeof Chart === 'undefined') {
+                    // 如果Chart.js未加载，尝试动态加载
+                    logToConsole('warn', 'Chart.js not loaded, attempting to load dynamically');
+                    
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js';
+                    script.async = true;
+                    
+                    // 等待脚本加载完成
+                    await new Promise((resolve, reject) => {
+                        script.onload = () => {
+                            logToConsole('info', 'Chart.js loaded dynamically');
+                            resolve();
+                        };
+                        script.onerror = () => reject(new Error('Failed to load Chart.js'));
+                        document.head.appendChild(script);
+                        
+                        // 添加超时
+                        setTimeout(() => {
+                            if (typeof Chart === 'undefined') {
+                                reject(new Error('Chart.js load timeout'));
+                            }
+                        }, 5000);
+                    });
+                }
+                
+                // 再次验证Chart.js已加载
+                if (typeof Chart === 'undefined') {
+                    throw new Error('Chart.js library is not available');
+                }
+                
+                // 确保sleep-pattern-visualization容器存在
+                const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                if (!chartContainer) {
+                    logToConsole('warn', 'Chart container not found, creating it');
+                    const mainContent = document.querySelector('.sleep-pattern-card');
+                    if (mainContent) {
+                        const visualizationDiv = document.createElement('div');
+                        visualizationDiv.className = 'sleep-pattern-visualization';
+                        visualizationDiv.innerHTML = '<canvas id="sleepChart" class="sleep-pattern-chart"></canvas>';
+                        mainContent.appendChild(visualizationDiv);
+                    }
+                }
+                
+                await initializeApp();
+                
+                // Restore sidebar state
+                const sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                if (sidebarCollapsed && document.querySelector('.sidebar')) {
+                    document.querySelector('.sidebar').classList.add('collapsed');
+                }
+
+                // Add navigation handling
+                setupNavigation();
+                
+                // 确保在页面完成加载后显示
+                document.documentElement.style.visibility = 'visible';
+            } catch (error) {
+                logToConsole('error', 'Failed to initialize app', { error: error.message, stack: error.stack });
+                showNotification(i18n.t('error_occurred') + ': ' + error.message, 'error');
+                
+                // 即使初始化失败，也确保页面显示并尝试恢复到基本状态
+                document.documentElement.style.visibility = 'visible';
+                
+                try {
+                    const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                    if (chartContainer) {
+                        chartContainer.innerHTML = `
+                            <div style="text-align: center; padding: 2rem; color: var(--danger);">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                                <p>${i18n.t('error_occurred')}: ${error.message}</p>
+                                <button onclick="window.location.reload()" class="week-nav-btn" style="margin-top: 1rem;">
+                                    <i class="fas fa-sync"></i> ${i18n.t('retry')}
+                                </button>
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    // 忽略恢复错误
+                }
+            }
+        });
+
+        // 设置当前周为本周
+        function setCurrentWeekToThisWeek() {
+            const now = new Date();
+            const currentDay = now.getDay();
+            const daysToMonday = currentDay === 0 ? 6 : currentDay - 1; // 计算到周一的距离
+            
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - daysToMonday);
+            monday.setHours(0, 0, 0, 0);
+            
+            currentWeekStart = monday;
+            updateWeekDisplay();
+        }
+
+        function updateWeekDisplay() {
+            if (!currentWeekStart) return;
+            
+            // Format the week start date
+            const weekStartStr = currentWeekStart.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+            
+            // Calculate end of week (Sunday)
+            const endOfWeek = new Date(currentWeekStart);
+            endOfWeek.setDate(currentWeekStart.getDate() + 6);
+            const weekEndStr = endOfWeek.toLocaleDateString('en-CA');
+            
+            // Update the week display
+            document.getElementById('weekStartDate').textContent = weekStartStr;
+            
+            logToConsole('info', 'Week display updated', {
+                weekStart: weekStartStr,
+                weekEnd: weekEndStr
+            });
+        }
+
+        async function navigateWeek(direction) {
+            try {
+                // Show loading indicator
+                const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                if (!chartContainer) {
+                    throw new Error('Chart container not found');
+                }
+                
+                // 保存当前图表，以便在导航失败时恢复
+                const previousContent = chartContainer.innerHTML;
+                
+                chartContainer.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 400px;">
+                        <div style="text-align: center;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent-primary);"></i>
+                            <p style="margin-top: 1rem; color: var(--text-secondary);">${i18n.t('loading')}...</p>
+                        </div>
+                    </div>
+                `;
+                
+                if (!currentWeekStart) {
+                    setCurrentWeekToThisWeek();
+                    return;
+                }
+
+                // Get today's date at midnight for comparison
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // Calculate current week's end to check if we're in current week
+                const currentWeekEnd = new Date(currentWeekStart);
+                currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+
+                switch (direction) {
+                    case 'prev':
+                        // Move to previous week (7 days back)
+                        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+                        break;
+                    case 'next':
+                        // Check if next week would be in the future
+                        const nextWeekStart = new Date(currentWeekStart);
+                        nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+                        
+                        if (nextWeekStart > today) {
+                            showNotification(i18n.t('cannot_select_future_dates'), 'warning');
+                            // 恢复之前的内容，不进行导航
+                            chartContainer.innerHTML = previousContent;
+                            return;
+                        }
+                        
+                        currentWeekStart = nextWeekStart;
+                        break;
+                    case 'this':
+                        setCurrentWeekToThisWeek();
+                        break;
+                    default:
+                        throw new Error('Invalid navigation direction');
+                }
+
+                updateWeekDisplay();
+                await loadSleepData();
+                
+                logToConsole('info', 'Week navigation successful', {
+                    direction,
+                    newWeekStart: currentWeekStart.toLocaleDateString('en-CA')
+                });
+            } catch (error) {
+                logToConsole('error', 'Week navigation failed', { error: error.message });
+                showNotification(i18n.t('error_navigating_week') + ': ' + error.message, 'error');
+                
+                // Restore chart container in case of error
+                const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                if (chartContainer) {
+                    chartContainer.innerHTML = '<canvas id="sleepChart" class="sleep-pattern-chart"></canvas>';
+                    
+                    // 尝试重新加载当前周的数据
+                    try {
+                        if (currentWeekStart) {
+                            await loadSleepData();
+                        }
+                    } catch (e) {
+                        // 忽略重新加载错误
+                    }
+                }
+            }
+        }
+
+        async function loadSleepData() {
+            try {
+                if (!currentWeekStart) {
+                    throw new Error('Week start date not set');
+                }
+
+                // 计算日期范围
+                const startDate = new Date(currentWeekStart);
+                const endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                
+                // 获取前两天的数据，以处理跨天的睡眠记录
+                const prevDay = new Date(startDate);
+                prevDay.setDate(startDate.getDate() - 2);
+                
+                // 显示加载状态
+                showLoading(true);
+                
+                // 使用正确的API端点
+                const response = await fetch(`/api/feeding/baby/507f1f77bcf86cd799439011/range?startDate=${prevDay.toISOString()}&endDate=${endDate.toISOString()}&type=sleep`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const records = await response.json();
+                
+                // 处理数据
+                const processedData = processSleepData(records, startDate, endDate);
+                
+                // 确保图表容器存在
+                const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                if (!chartContainer) {
+                    throw new Error('Chart container not found');
+                }
+                
+                // 更新图表
+                updateSleepChart(processedData);
+                
+                // 更新摘要
+                updateSleepSummary(processedData);
+                
+                console.log('Sleep data loaded successfully');
+            } catch (error) {
+                console.error('Failed to load sleep data:', error);
+                showNotification(i18n.t('failed_to_load_sleep_data'), 'error');
+                
+                // 显示错误信息
+                const chartContainer = document.querySelector('.sleep-pattern-visualization');
+                if (chartContainer) {
+                    chartContainer.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: var(--danger);">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p>${i18n.t('failed_to_load_sleep_data')}</p>
+                            <button onclick="loadSleepData()" class="week-nav-btn" style="margin-top: 1rem;">
+                                <i class="fas fa-sync"></i> ${i18n.t('retry')}
+                            </button>
+                        </div>
+                    `;
+                }
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 处理睡眠数据
+        function processSleepData(records, startDate, endDate) {
+            if (!Array.isArray(records) || records.length === 0) {
+                console.warn('No sleep records found or invalid records format');
+                return { days: [], data: [] };
+            }
+            
+            // 检查记录格式
+            const hasTimestamp = records[0].hasOwnProperty('timestamp');
+            const hasStartTime = records[0].hasOwnProperty('startTime');
+            
+            // 创建每天的数据
+            const days = [];
+            const data = [];
+            
+            // 创建一周的日期数组
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startDate);
+                day.setDate(startDate.getDate() + i);
+                days.push(day);
+                data.push([]); // 为每天创建一个空数组
+            }
+            
+            // 处理记录
+            records.forEach(record => {
+                // 兼容不同的API格式
+                const startTime = hasTimestamp ? new Date(record.timestamp) : new Date(record.startTime);
+                const duration = record.duration || 0; // 持续时间（分钟）
+                const endTime = hasTimestamp ? 
+                    new Date(startTime.getTime() + duration * 60 * 1000) : 
+                    new Date(record.endTime);
+                
+                // 检查记录是否在当前周内
+                for (let i = 0; i < 7; i++) {
+                    const dayStart = new Date(days[i]);
+                    dayStart.setHours(0, 0, 0, 0);
+                    
+                    const dayEnd = new Date(days[i]);
+                    dayEnd.setHours(23, 59, 59, 999);
+                    
+                    // 检查睡眠是否在这一天内开始或结束
+                    if ((startTime >= dayStart && startTime <= dayEnd) || 
+                        (endTime >= dayStart && endTime <= dayEnd) ||
+                        (startTime <= dayStart && endTime >= dayEnd)) {
+                        
+                        // 计算在当天的开始和结束时间
+                        const dayStartTime = Math.max(startTime.getTime(), dayStart.getTime());
+                        const dayEndTime = Math.min(endTime.getTime(), dayEnd.getTime());
+                        
+                        // 转换为小时格式 (0-24)
+                        const startHour = (new Date(dayStartTime).getHours() + 
+                                         new Date(dayStartTime).getMinutes() / 60);
+                        const endHour = (new Date(dayEndTime).getHours() + 
+                                       new Date(dayEndTime).getMinutes() / 60);
+                        
+                        // 只有当持续时间大于0时才添加
+                        if (dayEndTime > dayStartTime) {
+                            // 确定睡眠类型
+                            let sleepType = 'regular';
+                            const durationHours = (dayEndTime - dayStartTime) / (1000 * 60 * 60);
+                            
+                            // 晚上10点到早上7点的睡眠视为夜间睡眠
+                            if (startHour >= 22 || startHour < 7) {
+                                sleepType = 'night';
+                            } else if (durationHours <= 0.5) { // 30分钟或更短
+                                sleepType = 'short';
+                            }
+                            
+                            data[i].push({
+                                start: startHour,
+                                end: endHour,
+                                duration: durationHours,
+                                type: sleepType,
+                                originalStart: new Date(startTime),
+                                originalEnd: new Date(endTime),
+                                originalDuration: hasTimestamp ? duration : (endTime - startTime) / (1000 * 60)
+                            });
+                        }
+                    }
+                }
+            });
+            
+            return { days, data };
+        }
+
+        // 更新睡眠图表
+        function updateSleepChart(processedData) {
+            // 获取容器
+            const container = document.querySelector('.sleep-pattern-visualization');
+            if (!container) return;
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 创建图表容器
+            const chartWrapper = document.createElement('div');
+            chartWrapper.className = 'sleep-chart-wrapper';
+            chartWrapper.style.display = 'grid';
+            chartWrapper.style.gridTemplateColumns = 'auto repeat(7, 1fr)';
+            chartWrapper.style.height = '600px';
+            chartWrapper.style.position = 'relative';
+            chartWrapper.style.gap = '1px';
+            chartWrapper.style.backgroundColor = 'var(--bg-primary)';
+            // 防止出现滚动条
+            chartWrapper.style.overflowY = 'hidden';
+            
+            // 添加时间轴 - 从00:00到24:00
+            const timeAxis = document.createElement('div');
+            timeAxis.className = 'time-axis';
+            timeAxis.style.display = 'flex';
+            timeAxis.style.flexDirection = 'column';
+            timeAxis.style.justifyContent = 'space-between';
+            timeAxis.style.borderRight = '1px solid var(--border-color)';
+            timeAxis.style.padding = '0 8px';
+            timeAxis.style.position = 'relative';
+            timeAxis.style.backgroundColor = 'var(--bg-secondary)';
+            
+            // 添加24小时刻度（从00:00到24:00每两小时一个刻度）
+            const hours = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '24:00'];
+            hours.forEach((hour, index) => {
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.textContent = hour;
+                timeLabel.style.fontSize = '0.8rem';
+                timeLabel.style.color = 'var(--text-secondary)';
+                timeLabel.style.position = 'relative';
+                timeLabel.style.paddingRight = '5px';
+                timeAxis.appendChild(timeLabel);
+                
+                // 添加水平时间线
+                const gridLine = document.createElement('div');
+                gridLine.className = 'time-grid-line';
+                gridLine.style.top = `${(index / (hours.length - 1)) * 100}%`;
+                chartWrapper.appendChild(gridLine);
+            });
+            
+            chartWrapper.appendChild(timeAxis);
+            
+            // 获取今天的日期，用于高亮显示
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // 添加日期列（从左到右）
+            processedData.days.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                
+                // 检查是否为今天
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+                if (dayDate.getTime() === today.getTime()) {
+                    dayColumn.classList.add('today');
+                }
+                
+                dayColumn.style.position = 'relative';
+                dayColumn.style.height = '100%';
+                dayColumn.style.borderRight = '1px solid var(--border-color)';
+                dayColumn.style.backgroundColor = 'var(--bg-secondary)';
+                
+                // 添加日期标题
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                
+                // 格式化为 "Mon, Apr 7" 等格式
+                const dateFormatter = new Intl.DateTimeFormat(i18n.locale, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                dayHeader.textContent = dateFormatter.format(day);
+                
+                dayHeader.style.textAlign = 'center';
+                dayHeader.style.padding = '5px 0';
+                dayHeader.style.fontWeight = 'bold';
+                dayHeader.style.borderBottom = '1px solid var(--border-color)';
+                dayHeader.style.position = 'sticky';
+                dayHeader.style.top = '0';
+                dayHeader.style.backgroundColor = 'var(--bg-secondary)';
+                dayHeader.style.zIndex = '2';
+                
+                dayColumn.appendChild(dayHeader);
+                
+                // 添加睡眠块
+                processedData.data[index].forEach(sleep => {
+                    const sleepBlock = document.createElement('div');
+                    sleepBlock.className = `sleep-block sleep-${sleep.type}`;
+                    
+                    // 直接使用小时值作为百分比位置（0-24小时）
+                    const startPercent = (sleep.start / 24) * 100;
+                    const endPercent = (sleep.end / 24) * 100;
+                    
+                    sleepBlock.style.position = 'absolute';
+                    sleepBlock.style.left = '10%';
+                    sleepBlock.style.right = '10%';
+                    sleepBlock.style.top = `${startPercent}%`;
+                    sleepBlock.style.height = `${endPercent - startPercent}%`;
+                    
+                    // 根据睡眠类型设置颜色
+                    switch(sleep.type) {
+                        case 'night':
+                            sleepBlock.style.backgroundColor = 'rgba(100, 255, 218, 0.8)'; // 青色
+                            break;
+                        case 'short':
+                            sleepBlock.style.backgroundColor = 'rgba(255, 183, 77, 0.8)'; // 琥珀色
+                            break;
+                        default:
+                            sleepBlock.style.backgroundColor = 'rgba(100, 255, 218, 0.4)'; // 浅青色
+                    }
+                    
+                    sleepBlock.style.border = '1px solid var(--bg-tertiary)';
+                    sleepBlock.style.borderRadius = '4px';
+                    
+                    // 添加工具提示数据
+                    sleepBlock.dataset.startTime = formatTimeForDisplay(sleep.originalStart);
+                    sleepBlock.dataset.endTime = formatTimeForDisplay(sleep.originalEnd);
+                    sleepBlock.dataset.duration = `${Math.round(sleep.originalDuration)} ${i18n.t('minutes')}`;
+                    
+                    // 添加点击事件以显示详细信息
+                    sleepBlock.addEventListener('click', function(e) {
+                        showSleepDetails(sleep, day);
+                        e.stopPropagation();
+                    });
+                    
+                    dayColumn.appendChild(sleepBlock);
+                });
+                
+                chartWrapper.appendChild(dayColumn);
+            });
+            
+            // 添加当前时间指示线
+            addCurrentTimeIndicator(chartWrapper);
+            
+            // 添加图表到容器
+            container.appendChild(chartWrapper);
+            
+            // 添加睡眠摘要
+            updateSleepSummary(processedData);
+        }
+
+        // 添加当前时间指示线
+        function addCurrentTimeIndicator(chartWrapper) {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            // 使用直接的小时值（0-24）
+            const timePercentage = ((currentHour + currentMinute / 60) / 24) * 100;
+            
+            const timeIndicator = document.createElement('div');
+            timeIndicator.className = 'current-time-indicator';
+            timeIndicator.style.position = 'absolute';
+            timeIndicator.style.left = '0';
+            timeIndicator.style.right = '0';
+            timeIndicator.style.top = `${timePercentage}%`;
+            timeIndicator.style.height = '2px';
+            timeIndicator.style.backgroundColor = 'var(--danger)';
+            timeIndicator.style.zIndex = '5';
+            
+            // 添加时间标签
+            const timeLabel = document.createElement('div');
+            timeLabel.className = 'current-time-label';
+            timeLabel.textContent = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+            timeLabel.style.position = 'absolute';
+            timeLabel.style.right = '0';
+            timeLabel.style.top = '-10px';
+            timeLabel.style.backgroundColor = 'var(--danger)';
+            timeLabel.style.color = 'white';
+            timeLabel.style.padding = '2px 4px';
+            timeLabel.style.borderRadius = '2px';
+            timeLabel.style.fontSize = '0.7rem';
+            
+            timeIndicator.appendChild(timeLabel);
+            chartWrapper.appendChild(timeIndicator);
+            
+            // 每分钟更新一次时间指示线
+            setInterval(function() {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                
+                // 使用直接的小时值
+                const timePercentage = ((currentHour + currentMinute / 60) / 24) * 100;
+                
+                timeIndicator.style.top = `${timePercentage}%`;
+                timeLabel.textContent = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+            }, 60000);
+        }
+
+        // 更新睡眠摘要函数
+        function updateSleepSummary(processedData) {
+            // 创建或获取摘要容器
+            let summaryContainer = document.getElementById('sleepSummary');
+            if (!summaryContainer) {
+                summaryContainer = document.createElement('div');
+                summaryContainer.id = 'sleepSummary';
+                const card = document.querySelector('.sleep-pattern-card');
+                if (card) {
+                    card.appendChild(summaryContainer);
+                }
+            }
+
+            // 计算总睡眠时间和次数
+            let totalSleep = 0;
+            let totalNaps = 0;
+            let nightSleepTotal = 0;
+            let nightSleepCount = 0;
+            let daySleepTotal = 0;
+            let daySleepCount = 0;
+            
+            processedData.data.forEach(dayData => {
+                dayData.forEach(sleep => {
+                    const durationHours = sleep.duration;
+                    totalSleep += durationHours;
+                    totalNaps++;
+                    
+                    if (sleep.type === 'night') {
+                        nightSleepTotal += durationHours;
+                        nightSleepCount++;
+                    } else {
+                        daySleepTotal += durationHours;
+                        daySleepCount++;
+                    }
+                });
+            });
+            
+            const avgNightSleep = nightSleepCount > 0 ? nightSleepTotal / nightSleepCount : 0;
+            const avgDaySleep = daySleepCount > 0 ? daySleepTotal / daySleepCount : 0;
+            
+            // 更新摘要内容 - 使用与截图类似的布局
+            summaryContainer.innerHTML = `
+                <h3>Sleep Summary</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-value">${totalSleep.toFixed(1)}</span>
+                        <span class="summary-label">total_hours</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-value">${totalNaps}</span>
+                        <span class="summary-label">total_naps</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-value">${avgNightSleep.toFixed(1)}</span>
+                        <span class="summary-label">avg_night</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-value">${avgDaySleep.toFixed(1)}</span>
+                        <span class="summary-label">avg_day</span>
+                    </div>
+                </div>
+            `;
+            
+            // 应用样式
+            summaryContainer.style.marginTop = '2rem';
+            summaryContainer.style.padding = '1.5rem';
+            summaryContainer.style.backgroundColor = 'var(--bg-tertiary)';
+            summaryContainer.style.borderRadius = '10px';
+            summaryContainer.style.color = 'var(--text-primary)';
+            
+            // 设置标题样式
+            const summaryTitle = summaryContainer.querySelector('h3');
+            if (summaryTitle) {
+                summaryTitle.style.marginBottom = '1.5rem';
+                summaryTitle.style.color = 'var(--accent-primary)';
+                summaryTitle.style.textAlign = 'center';
+                summaryTitle.style.fontSize = '1.3rem';
+            }
+            
+            // 设置网格样式
+            const grid = summaryContainer.querySelector('.summary-grid');
+            if (grid) {
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+                grid.style.gap = '1.5rem';
+                grid.style.textAlign = 'center';
+            }
+            
+            // 设置值的样式
+            const values = summaryContainer.querySelectorAll('.summary-value');
+            values.forEach(value => {
+                value.style.display = 'block';
+                value.style.fontSize = '2rem';
+                value.style.fontWeight = 'bold';
+                value.style.color = 'var(--accent-primary)';
+                value.style.marginBottom = '0.5rem';
+            });
+            
+            // 设置标签的样式
+            const labels = summaryContainer.querySelectorAll('.summary-label');
+            labels.forEach(label => {
+                label.style.display = 'block';
+                label.style.fontSize = '0.9rem';
+                label.style.color = 'var(--text-secondary)';
+                
+                // 为不同的标签设置正确的文本
+                switch(label.textContent) {
+                    case 'total_hours':
+                        label.textContent = 'Total Hours';
+                        break;
+                    case 'total_naps':
+                        label.textContent = 'Total Naps';
+                        break;
+                    case 'avg_night':
+                        label.textContent = 'Avg Night';
+                        break;
+                    case 'avg_day':
+                        label.textContent = 'Avg Day';
+                        break;
+                }
+            });
+        }
+
+        // 添加睡眠图例
+        function addSleepLegend(container) {
+            const legend = document.createElement('div');
+            legend.id = 'sleepLegend';
+            
+            legend.innerHTML = `
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                    <div style="display: inline-flex; align-items: center;">
+                        <div style="width: 16px; height: 16px; background: rgba(100, 255, 218, 0.8); 
+                                    border: 1px solid var(--bg-tertiary); margin-right: 6px; border-radius: 3px;"></div>
+                        <span data-i18n="night_sleep">${i18n.t('night_sleep')}</span>
+                    </div>
+                    <div style="display: inline-flex; align-items: center;">
+                        <div style="width: 16px; height: 16px; background: rgba(100, 255, 218, 0.4); 
+                                    border: 1px solid var(--bg-tertiary); margin-right: 6px; border-radius: 3px;"></div>
+                        <span data-i18n="regular_sleep">${i18n.t('regular_sleep')}</span>
+                    </div>
+                    <div style="display: inline-flex; align-items: center;">
+                        <div style="width: 16px; height: 16px; background: rgba(255, 183, 77, 0.8); 
+                                    border: 1px solid var(--bg-tertiary); margin-right: 6px; border-radius: 3px;"></div>
+                        <span data-i18n="short_nap">${i18n.t('short_nap')}</span>
+                    </div>
+                </div>
+                <div style="font-style: italic; margin-top: 0.5rem; font-size: 0.8rem; text-align: center;">
+                    ${i18n.t('click_for_details')}
+                </div>
+            `;
+            
+            container.appendChild(legend);
+        }
+
+        // 显示睡眠详情
+        function showSleepDetails(sleep, day) {
+            const formattedDate = day.toLocaleDateString(i18n.locale, {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const formattedStart = formatTimeForDisplay(sleep.originalStart);
+            const formattedEnd = formatTimeForDisplay(sleep.originalEnd);
+            const duration = Math.round(sleep.originalDuration);
+            const hours = Math.floor(duration / 60);
+            const minutes = duration % 60;
+            
+            let durationText = '';
+            if (hours > 0) {
+                durationText += `${hours} ${i18n.t('hours')} `;
+            }
+            if (minutes > 0 || hours === 0) {
+                durationText += `${minutes} ${i18n.t('minutes')}`;
+            }
+            
+            let sleepTypeText = '';
+            switch(sleep.type) {
+                case 'night':
+                    sleepTypeText = i18n.t('night_sleep');
+                    break;
+                case 'short':
+                    sleepTypeText = i18n.t('short_nap');
+                    break;
+                default:
+                    sleepTypeText = i18n.t('regular_sleep');
+            }
+            
+            const message = `
+                <strong>${formattedDate}</strong><br>
+                ${i18n.t('sleep_type')}: ${sleepTypeText}<br>
+                ${i18n.t('start_time')}: ${formattedStart}<br>
+                ${i18n.t('end_time')}: ${formattedEnd}<br>
+                ${i18n.t('duration')}: ${durationText}
+            `;
+            
+            showNotification(message, 'success', 5000);
+        }
+
+        // 修改通知函数以支持更长的显示时间和HTML内容
+        function showNotification(message, type = 'success', duration = 3000) {
+            const container = document.querySelector('.notification-container') || 
+                (() => {
+                    const div = document.createElement('div');
+                    div.className = 'notification-container';
+                    document.body.appendChild(div);
+                    return div;
+                })();
+            
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.innerHTML = `
+                <div>${message}</div>
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 周导航按钮
+            const prevWeekBtn = document.querySelector('.prev-week');
+            const nextWeekBtn = document.querySelector('.next-week');
+            const thisWeekBtn = document.querySelector('.week-nav-btn[onclick*="this"]');
+            const themeSwitch = document.querySelector('.theme-switch');
+            
+            if (prevWeekBtn) {
+                prevWeekBtn.addEventListener('click', () => {
+                    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+                    updateWeekDisplay();
+                    loadSleepData();
+                });
+            }
+            
+            if (nextWeekBtn) {
+                nextWeekBtn.addEventListener('click', () => {
+                    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                    updateWeekDisplay();
+                    loadSleepData();
+                });
+            }
+            
+            if (thisWeekBtn) {
+                thisWeekBtn.addEventListener('click', () => {
+                    setCurrentWeekToThisWeek();
+                    loadSleepData();
+                });
+            }
+            
+            if (themeSwitch) {
+                themeSwitch.addEventListener('click', toggleTheme);
+            }
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            const loadingElement = document.querySelector('.loading-indicator');
+            if (loadingElement) {
+                loadingElement.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        // Theme and UI functions
+        function toggleSidebar(event) {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                sidebar.classList.toggle('collapsed');
+                dashboardContainer.classList.toggle('sidebar-collapsed');
+                
+                // Update button icon based on sidebar state
+                const toggleBtn = document.querySelector('.sidebar-toggle i');
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.className = 'fas fa-chevron-right';
+                } else {
+                    toggleBtn.className = 'fas fa-chevron-left';
+                }
+                
+                // Save sidebar state to localStorage - 兼容两种键名
+                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                
+                // 阻止事件冒泡和默认行为
+                if (event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+                
+                console.log('Sidebar toggled successfully:', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to toggle sidebar:', error);
+                showNotification('Failed to toggle sidebar: ' + error.message, 'error');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            updateThemeIcon();
+            const themeText = i18n.t(newTheme === 'dark' ? 'dark_mode' : 'light_mode');
+            showNotification(i18n.t('switched_to') + ' ' + themeText, 'success');
+            
+            // 更新图表颜色以匹配新主题 - 添加安全检查
+            try {
+                if (window.sleepChart && typeof window.sleepChart.update === 'function') {
+                    window.sleepChart.update();
+                } else if (currentWeekStart) {
+                    // 如果图表实例不可用但有周开始日期，则重新加载数据
+                    loadSleepData();
+                }
+            } catch (error) {
+                logToConsole('error', 'Error updating chart after theme change', { 
+                    error: error.message,
+                    chartExists: window.sleepChart !== undefined && window.sleepChart !== null
+                });
+                // 忽略错误，不要中断用户体验
+            }
+        }
+
+        function updateThemeIcon() {
+            const themeIcon = document.querySelector('.theme-switch i');
+            const themeText = document.querySelector('.theme-switch span');
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                themeIcon.className = 'fas fa-moon';
+                themeText.setAttribute('data-i18n', 'dark_mode');
+            } else {
+                themeIcon.className = 'fas fa-sun';
+                themeText.setAttribute('data-i18n', 'light_mode');
+            }
+            // Update the text content using i18n
+            themeText.textContent = i18n.t(currentTheme === 'dark' ? 'dark_mode' : 'light_mode');
+        }
+
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-item');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.classList.contains('active')) return;
+                    if (this.getAttribute('href') === '#') return;
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    // Add a small delay to allow the current page to save any necessary state
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 50);
+                });
+            });
+        }
+
+        // 添加changeLanguage函数
+        function changeLanguage(locale) {
+            if (i18n && typeof i18n.setLocale === 'function') {
+                i18n.setLocale(locale);
+                showNotification(i18n.t('language_changed'), 'success');
+                // 延迟刷新页面以应用语言更改
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            } else {
+                logToConsole('error', 'i18n not initialized properly');
+                showNotification('Error changing language', 'error');
+            }
+        }
+
+        // 添加 updateChartsTheme 函数
+        function updateChartsTheme() {
+            if (!window.sleepChart) return;
+            
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDarkTheme ? '#a0a0a0' : '#636e72';
+            const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
+            const options = {
+                scales: {
+                    x: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor
+                        }
+                    }
+                }
+            };
+            
+            window.sleepChart.options = options;
+            window.sleepChart.update();
+        }
+
+        // Initialize sidebar state
+        function initializeSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                // 支持两种localStorage键名
+                let isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                // 如果新键名存在，优先使用新键名的值
+                if (localStorage.getItem('sidebarCollapsed') !== null) {
+                    isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                }
+                
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    dashboardContainer.classList.add('sidebar-collapsed');
+                    // Update button icon
+                    const toggleBtn = document.querySelector('.sidebar-toggle i');
+                    if (toggleBtn) {
+                        toggleBtn.className = 'fas fa-chevron-right';
+                    }
+                }
+                
+                console.log('Sidebar initialized successfully:', isCollapsed ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to initialize sidebar:', error);
+                showNotification('Failed to initialize sidebar: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

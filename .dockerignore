@@ -1,0 +1,71 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Development files
+*.test.js
+*.spec.js
+tests/
+coverage/
+docs/
+README.md
+CHANGELOG.md
+LICENSE
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Application specific
+backend/node_modules/
+backend/logs/
+backend/backups/
+backend/coverage/
+backend/tests/
+backend/*.test.js
+backend/.env*
+!backend/.env.example
+backend/npm-debug.log
+backend/*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.zip 
+
+node_modules/
+npm-debug.log
+.DS_Store
+.git/
+.gitignore
+.env
+docker-compose*.yml
+**/__tests__
+**/coverage

@@ -12,14 +12,17 @@ const waitForAlert = async (page, timeout = 2000) => {
     });
 };
 
-const waitForSuccess = async (page, timeout = 2000) => {
+const waitForSuccess = async (page, timeout = 3500) => {
     try {
+        // First wait for the alert to appear
         await page.waitForSelector('.alert-success', { 
             state: 'visible',
             timeout: timeout
         });
+        
+        // Then wait for it to be removed from the DOM
         await page.waitForSelector('.alert-success', { 
-            state: 'hidden',
+            state: 'detached',
             timeout: timeout
         });
     } catch (error) {

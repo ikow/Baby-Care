@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="nav_settings">Settings</title>
+    <!-- Add this script before any other scripts or styles -->
+    <script>
+        // Immediately apply theme, language, and sidebar state before page renders
+        (function() {
+            // Hide content until everything is initialized
+            document.documentElement.style.visibility = 'hidden';
+            
+            // Apply theme
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Apply language - 默认使用中文
+            const language = localStorage.getItem('language') || 'zh';
+            document.documentElement.setAttribute('lang', language);
+            
+            // Add a class to prevent transitions during page load
+            document.documentElement.classList.add('no-transitions');
+
+            // Load translations synchronously
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/js/i18n/translations.js', false); // false makes it synchronous
+            xhr.send();
+            if (xhr.status === 200) {
+                eval(xhr.responseText);
+                // Initialize i18n immediately
+                if (typeof i18n !== 'undefined') {
+                    i18n.currentLocale = language;
+                }
+            }
+            
+            // Show content after a small delay to ensure everything is ready
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    document.documentElement.classList.remove('no-transitions');
+                    document.documentElement.style.visibility = 'visible';
+                }, 50);
+            });
+        })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/js/i18n/translations.js"></script>
+    <!-- Add sidebar JS -->
+    <script src="/js/sidebar.js"></script>
+    <!-- Add sidebar CSS -->
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        /* Add this at the top of your styles */
+        .no-transitions * {
+            transition: none !important;
+        }
+
+        /* Theme Variables */
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1b1e;
+            --bg-secondary: #2a2b2f;
+            --bg-tertiary: #32333a;
+            --accent-primary: #64ffda;
+            --accent-secondary: #bb86fc;
+            --accent-warning: #ffb74d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --success: #00e676;
+            --danger: #ff5252;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+        }
+
+        :root[data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #e8e8e8;
+            --accent-primary: #00b894;
+            --accent-secondary: #6c5ce7;
+            --accent-warning: #f39c12;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: #dfe6e9;
+            --success: #00b894;
+            --danger: #d63031;
+            --gold: #f1c40f;
+            --silver: #95a5a6;
+            --bronze: #d35400;
+        }
+
+        /* Add global transition for theme changes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease,
+                      color 0.3s ease,
+                      border-color 0.3s ease,
+                      box-shadow 0.3s ease;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+        
+        .dashboard-container.sidebar-collapsed {
+            grid-template-columns: 80px 1fr;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Settings Styles */
+        .settings-section {
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-section h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .profile-img-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .profile-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--accent-primary);
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 2rem;
+        }
+
+        .upload-btn {
+            padding: 0.5rem 1rem;
+            background-color: var(--accent-primary);
+            border: none;
+            border-radius: 5px;
+            color: var(--bg-primary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: var(--accent-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-radius: 5px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.2);
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-text {
+            flex: 1;
+        }
+
+        .settings-text h3 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .settings-text p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .theme-btns {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .theme-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .light-btn {
+            background-color: #f5f5f5;
+        }
+
+        .dark-btn {
+            background-color: #2a2b2f;
+        }
+
+        .theme-btn.active {
+            border-color: var(--accent-primary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-tertiary);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: var(--text-primary);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--accent-primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .language-select {
+            appearance: none;
+            padding-right: 30px;
+            cursor: pointer;
+        }
+
+        .btn-save {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--accent-primary);
+            border: none;
+            border-radius: 5px;
+            color: var(--bg-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-save:hover {
+            background-color: var(--accent-secondary);
+        }
+
+        .danger-zone {
+            background-color: rgba(255, 82, 82, 0.1);
+            border-left: 4px solid var(--danger);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: #ff7b7b;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close-modal:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-cancel {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--bg-tertiary);
+            border: none;
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background-color: var(--border-color);
+        }
+
+        .btn-confirm {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--danger);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-confirm:hover {
+            background-color: #ff7b7b;
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 5px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-success {
+            background-color: var(--success);
+        }
+
+        .notification-error {
+            background-color: var(--danger);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container.sidebar-collapsed {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .settings-section {
+                padding: 1rem;
+            }
+            
+            .profile-img-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        /* Theme Switch Button */
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+            width: calc(100% - 2rem);
+        }
+
+        .theme-switch:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .theme-switch i {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fas fa-baby"></i>
+                <h2>Baby Care</h2>
+            </div>
+            <button class="sidebar-toggle">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <nav>
+                <a href="/index.html" class="nav-item" data-page="index.html">
+                    <i class="fas fa-home"></i>
+                    <span data-i18n="nav_dashboard">Dashboard</span>
+                </a>
+                <a href="/statistics.html" class="nav-item" data-page="statistics.html">
+                    <i class="fas fa-chart-bar"></i>
+                    <span data-i18n="nav_statistics">Statistics</span>
+                </a>
+                <a href="/sleep-pattern.html" class="nav-item" data-page="sleep-pattern.html">
+                    <i class="fas fa-moon"></i>
+                    <span data-i18n="nav_sleep_pattern">Sleep Pattern</span>
+                </a>
+                <a href="/body-data.html" class="nav-item" data-page="body-data.html">
+                    <i class="fas fa-weight"></i>
+                    <span data-i18n="nav_body_data">Body Data</span>
+                </a>
+                <a href="/settings.html" class="nav-item active" data-page="settings.html">
+                    <i class="fas fa-cog"></i>
+                    <span data-i18n="nav_settings">Settings</span>
+                </a>
+            </nav>
+            <!-- Theme Switch Button -->
+            <div class="theme-switch">
+                <i class="fas fa-moon"></i>
+                <span data-i18n="dark_mode">Dark Mode</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 class="page-title" data-i18n="nav_settings">Settings</h1>
+            
+            <!-- Profile Section -->
+            <div class="settings-section">
+                <h2 data-i18n="settings_profile">Profile Settings</h2>
+                <div class="profile-info">
+                    <div class="profile-img-container">
+                        <div class="profile-img">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <button class="upload-btn">
+                            <i class="fas fa-upload"></i> 
+                            <span data-i18n="settings_upload_photo">Upload Photo</span>
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="parent-name" data-i18n="settings_parent_name">Parent Name</label>
+                        <input type="text" id="parent-name" class="form-control" value="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="baby-name" data-i18n="settings_baby_name">Baby Name</label>
+                        <input type="text" id="baby-name" class="form-control" value="Emma">
+                    </div>
+                    <div class="form-group">
+                        <label for="baby-birthdate" data-i18n="settings_baby_birthdate">Baby Birth Date</label>
+                        <input type="date" id="baby-birthdate" class="form-control" value="2023-01-15">
+                    </div>
+                    <button id="save-profile" class="btn-save">
+                        <i class="fas fa-save"></i> 
+                        <span data-i18n="settings_save_profile">Save Profile</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Appearance Section -->
+            <div class="settings-section">
+                <h2 data-i18n="settings_appearance">Appearance</h2>
+                <div class="settings-row">
+                    <div class="settings-text">
+                        <h3 data-i18n="settings_theme">Theme</h3>
+                        <p data-i18n="settings_theme_description">Choose between light and dark theme</p>
+                    </div>
+                    <div class="theme-btns">
+                        <div id="light-theme" class="theme-btn light-btn"></div>
+                        <div id="dark-theme" class="theme-btn dark-btn"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Language Section -->
+            <div class="settings-section">
+                <h2 data-i18n="settings_language">Language</h2>
+                <div class="settings-row">
+                    <div class="settings-text">
+                        <h3 data-i18n="settings_select_language">Select Language</h3>
+                        <p data-i18n="settings_language_description">Choose your preferred language</p>
+                    </div>
+                    <div class="select-wrapper">
+                        <select id="language-select" class="form-control language-select">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="zh">中文</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications Section -->
+            <div class="settings-section">
+                <h2 data-i18n="settings_notifications">Notifications</h2>
+                <div class="settings-row">
+                    <div class="settings-text">
+                        <h3 data-i18n="settings_enable_notifications">Enable Notifications</h3>
+                        <p data-i18n="settings_notifications_description">Receive alerts for feeding, sleep and other events</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-notifications">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Danger Zone Section -->
+            <div class="settings-section danger-zone">
+                <h2 data-i18n="settings_danger_zone">Danger Zone</h2>
+                <div class="settings-row">
+                    <div class="settings-text">
+                        <h3 data-i18n="settings_reset_data">Reset All Data</h3>
+                        <p data-i18n="settings_reset_description">This will permanently delete all your data</p>
+                    </div>
+                    <button id="reset-btn" class="btn-save btn-danger">
+                        <i class="fas fa-trash"></i> 
+                        <span data-i18n="settings_reset">Reset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 class="modal-title" data-i18n="settings_confirm_reset">Confirm Reset</h2>
+            <div class="modal-body">
+                <p data-i18n="settings_reset_warning">Are you sure you want to reset all data? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-reset" class="btn-cancel" data-i18n="settings_cancel">Cancel</button>
+                <button id="confirm-reset" class="btn-confirm" data-i18n="settings_confirm">Yes, Reset All</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize translations
+            i18n.init();
+            translatePage();
+            
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            // Setup theme buttons
+            document.getElementById('dark-theme').addEventListener('click', function() {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon();
+                
+                // Update active class
+                document.getElementById('dark-theme').classList.add('active');
+                document.getElementById('light-theme').classList.remove('active');
+                
+                showNotification('success', i18n.t('settings_theme_updated'));
+            });
+            
+            document.getElementById('light-theme').addEventListener('click', function() {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon();
+                
+                // Update active class
+                document.getElementById('light-theme').classList.add('active');
+                document.getElementById('dark-theme').classList.remove('active');
+                
+                showNotification('success', i18n.t('settings_theme_updated'));
+            });
+            
+            // Set active theme button based on current theme
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.getElementById('dark-theme').classList.add('active');
+            } else {
+                document.getElementById('light-theme').classList.add('active');
+            }
+            
+            // Theme switch in the sidebar
+            const themeSwitch = document.querySelector('.theme-switch');
+            if (themeSwitch) {
+                themeSwitch.addEventListener('click', toggleTheme);
+            }
+            
+            // 添加侧边栏切换按钮事件处理
+            const toggleBtn = document.querySelector('.sidebar-toggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    toggleSidebar(e);
+                });
+            }
+            
+            // Setup language dropdown
+            const langSelect = document.getElementById('language-select');
+            
+            // 确保选择当前已保存的语言
+            const currentLanguage = localStorage.getItem('language') || 'zh';
+            langSelect.value = currentLanguage;
+            
+            langSelect.addEventListener('change', function() {
+                const selectedLanguage = this.value;
+                localStorage.setItem('language', selectedLanguage);
+                i18n.currentLocale = selectedLanguage;
+                
+                // 更新文档语言属性
+                document.documentElement.setAttribute('lang', selectedLanguage);
+                
+                // 重新翻译整个页面
+                translatePage();
+                
+                // 显示通知
+                showNotification('success', i18n.t('settings_language_updated'));
+            });
+            
+            // Initialize notification buttons
+            const toggleNotificationsBtn = document.getElementById('toggle-notifications');
+            toggleNotificationsBtn.checked = localStorage.getItem('notifications') !== 'disabled';
+            
+            toggleNotificationsBtn.addEventListener('change', function() {
+                localStorage.setItem('notifications', this.checked ? 'enabled' : 'disabled');
+                showNotification('success', this.checked ? 
+                    i18n.t('settings_notifications_enabled') : 
+                    i18n.t('settings_notifications_disabled'));
+            });
+            
+            // Save profile button
+            const saveProfileBtn = document.getElementById('save-profile');
+            saveProfileBtn.addEventListener('click', function() {
+                // Simulate saving profile
+                setTimeout(() => {
+                    showNotification('success', i18n.t('settings_profile_saved'));
+                }, 500);
+            });
+            
+            // Reset button and modal
+            const resetBtn = document.getElementById('reset-btn');
+            const resetModal = document.getElementById('reset-modal');
+            const closeModal = document.querySelector('.close-modal');
+            const cancelBtn = document.getElementById('cancel-reset');
+            const confirmBtn = document.getElementById('confirm-reset');
+            
+            resetBtn.addEventListener('click', function() {
+                resetModal.style.display = 'flex';
+            });
+            
+            function closeResetModal() {
+                resetModal.style.display = 'none';
+            }
+            
+            closeModal.addEventListener('click', closeResetModal);
+            cancelBtn.addEventListener('click', closeResetModal);
+            
+            confirmBtn.addEventListener('click', function() {
+                // Simulate reset
+                setTimeout(() => {
+                    closeResetModal();
+                    showNotification('success', i18n.t('settings_reset_success'));
+                }, 500);
+            });
+            
+            // Initialize sidebar
+            initializeSidebar();
+        });
+        
+        function translatePage() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (key) {
+                    element.textContent = i18n.t(key);
+                }
+            });
+            
+            // 更新页面标题和其他可能的动态内容
+            document.title = i18n.t('nav_settings');
+            
+            // 更新主题开关文本
+            updateThemeIcon();
+        }
+        
+        function showNotification(type, message) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Hide and remove notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        // Toggle sidebar function
+        function toggleSidebar(event) {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                sidebar.classList.toggle('collapsed');
+                dashboardContainer.classList.toggle('sidebar-collapsed');
+                
+                // Update button icon based on sidebar state
+                const toggleBtn = document.querySelector('.sidebar-toggle i');
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.className = 'fas fa-chevron-right';
+                } else {
+                    toggleBtn.className = 'fas fa-chevron-left';
+                }
+                
+                // Save sidebar state to localStorage - 兼容两种键名
+                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                
+                // 阻止事件冒泡和默认行为
+                if (event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+                
+                console.log('Sidebar toggled successfully:', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to toggle sidebar:', error);
+                showNotification('error', 'Failed to toggle sidebar: ' + error.message);
+            }
+        }
+        
+        // Initialize sidebar state
+        function initializeSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                // 支持两种localStorage键名
+                let isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                // 如果新键名存在，优先使用新键名的值
+                if (localStorage.getItem('sidebarCollapsed') !== null) {
+                    isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                }
+                
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    dashboardContainer.classList.add('sidebar-collapsed');
+                    // Update button icon
+                    const toggleBtn = document.querySelector('.sidebar-toggle i');
+                    if (toggleBtn) {
+                        toggleBtn.className = 'fas fa-chevron-right';
+                    }
+                }
+                
+                // Initialize the theme icon
+                updateThemeIcon();
+                
+                console.log('Sidebar initialized successfully:', isCollapsed ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to initialize sidebar:', error);
+                showNotification('error', 'Failed to initialize sidebar: ' + error.message);
+            }
+        }
+        
+        // Toggle theme function for the theme switch button
+        function toggleTheme() {
+            try {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                // 直接设置主题
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                
+                // 更新图表（如果存在）
+                if (typeof updateChartsTheme === 'function') {
+                    updateChartsTheme();
+                }
+                
+                // 更新主题图标
+                updateThemeIcon();
+                
+                // 显示通知
+                showNotification('success', newTheme === 'dark' ? 
+                    i18n.t('settings_theme_dark') : 
+                    i18n.t('settings_theme_light'));
+                
+                // 触发主题变更事件
+                window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: newTheme } }));
+                
+                // 更新设置面板中的主题按钮
+                const darkThemeBtn = document.getElementById('dark-theme');
+                const lightThemeBtn = document.getElementById('light-theme');
+                
+                if (newTheme === 'dark') {
+                    darkThemeBtn.classList.add('active');
+                    lightThemeBtn.classList.remove('active');
+                } else {
+                    lightThemeBtn.classList.add('active');
+                    darkThemeBtn.classList.remove('active');
+                }
+            } catch (error) {
+                console.error('Failed to toggle theme:', error);
+                showNotification('error', 'Failed to toggle theme: ' + error.message);
+            }
+        }
+        
+        // Update theme icon based on current theme
+        function updateThemeIcon() {
+            try {
+                const themeIcon = document.querySelector('.theme-switch i');
+                const themeText = document.querySelector('.theme-switch span');
+                
+                if (!themeIcon || !themeText) return;
+                
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                
+                if (currentTheme === 'dark') {
+                    themeIcon.className = 'fas fa-moon';
+                    themeText.textContent = i18n.t('dark_mode');
+                } else {
+                    themeIcon.className = 'fas fa-sun';
+                    themeText.textContent = i18n.t('light_mode');
+                }
+            } catch (error) {
+                console.error('Failed to update theme icon:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baby Care Admin Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/admin.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="js/i18n/translations.js"></script>
+    <script src="js/admin.js" defer></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fas fa-user-shield"></i>
+                <h2>Admin Portal</h2>
+            </div>
+            <nav>
+                <a href="#dashboard" class="nav-item active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#logs" class="nav-item" onclick="switchTab('logs')">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>System Logs</span>
+                </a>
+                <a href="#backup" class="nav-item" onclick="switchTab('backup')">
+                    <i class="fas fa-database"></i>
+                    <span>Database Backup</span>
+                </a>
+                <a href="#users" class="nav-item" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i>
+                    <span>User Management</span>
+                </a>
+                <a href="#settings" class="nav-item" onclick="switchTab('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>System Settings</span>
+                </a>
+                <a href="#analytics" class="nav-item" onclick="switchTab('analytics')">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+            <a href="/" class="nav-item back-to-app">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to App</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="content-section active">
+                <h2 class="section-title">System Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-users"></i>
+                        <div class="stat-content">
+                            <h3>Total Users</h3>
+                            <p id="totalUsers">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-database"></i>
+                        <div class="stat-content">
+                            <h3>Database Size</h3>
+                            <p id="dbSize">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div class="stat-content">
+                            <h3>Uptime</h3>
+                            <p id="systemUptime">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-memory"></i>
+                        <div class="stat-content">
+                            <h3>Memory Usage</h3>
+                            <p id="memoryUsage">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div id="logs" class="content-section">
+                <h2 class="section-title">System Logs</h2>
+                <div class="logs-controls">
+                    <div class="filters">
+                        <select id="logLevel" class="form-control">
+                            <option value="all">All Levels</option>
+                            <option value="error">Error</option>
+                            <option value="warn">Warning</option>
+                            <option value="info">Info</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                        <input type="date" id="logDate" class="form-control">
+                        <button class="btn" onclick="clearLogFilters()">
+                            <i class="fas fa-times"></i>
+                            Clear Filters
+                        </button>
+                    </div>
+                    <div class="log-actions">
+                        <button class="btn" onclick="refreshLogs()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                        <button class="btn" onclick="exportLogs()">
+                            <i class="fas fa-download"></i>
+                            Export
+                        </button>
+                    </div>
+                </div>
+                <div class="logs-container">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Level</th>
+                                <th>Message</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logContent">
+                            <tr><td colspan="4">Loading logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Backup Section -->
+            <div id="backup" class="content-section">
+                <h2 class="section-title">Database Backup</h2>
+                <div class="backup-controls">
+                    <div class="backup-info">
+                        <h3>Last Backup</h3>
+                        <p id="lastBackupTime">Never</p>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn primary" onclick="createBackup()">
+                            <i class="fas fa-download"></i>
+                            Create New Backup
+                        </button>
+                        <button class="btn" onclick="scheduleBackup()">
+                            <i class="fas fa-clock"></i>
+                            Schedule Backup
+                        </button>
+                    </div>
+                </div>
+                <div class="backup-list">
+                    <h3>Backup History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Size</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupHistory">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Management Section -->
+            <div id="users" class="content-section">
+                <h2 class="section-title">User Management</h2>
+                <div class="user-controls">
+                    <button class="btn primary" onclick="showAddUserModal()">
+                        <i class="fas fa-user-plus"></i>
+                        Add User
+                    </button>
+                </div>
+                <div class="user-list">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Last Login</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- System Settings Section -->
+            <div id="settings" class="content-section">
+                <h2 class="section-title">System Settings</h2>
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>Backup Settings</h3>
+                        <div class="form-group">
+                            <label>Automatic Backup</label>
+                            <select id="backupFrequency" class="form-control">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Retention Period (days)</label>
+                            <input type="number" id="retentionPeriod" class="form-control" min="1">
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Log Settings</h3>
+                        <div class="form-group">
+                            <label>Log Level</label>
+                            <select id="systemLogLevel" class="form-control">
+                                <option value="error">Error Only</option>
+                                <option value="warn">Warning & Above</option>
+                                <option value="info">Info & Above</option>
+                                <option value="debug">Debug & Above</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Log Rotation</label>
+                            <select id="logRotation" class="form-control">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="size">By Size</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analytics" class="content-section">
+                <div class="section-header">
+                    <h2>Analytics</h2>
+                </div>
+                <div class="analytics-grid">
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="userActivityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="resourceUsageChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="errorRateChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="dbGrowthChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notification-container"></div>
+</body>
+</html> 

@@ -8,7 +8,11 @@
     "dev": "nodemon server.js",
     "test:backend": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/baby_care_test playwright test backend.test.js",
     "test:frontend": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/baby_care_test playwright test frontend.test.js",
-    "test": "npm run test:backend && npm run test:frontend"
+    "test": "npm run test:backend && npm run test:frontend",
+    "db:backup": "node scripts/db-manager.js backup",
+    "db:backup:remote": "echo 'Usage: npm run db:backup:remote -- <host> <port> <database> [username] [password]' && node scripts/db-manager.js backup",
+    "db:restore": "node scripts/db-manager.js restore",
+    "db:list": "node scripts/db-manager.js list"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -16,9 +20,13 @@
     "express": "^4.18.2",
     "mongoose": "^7.0.3",
     "moment-timezone": "^0.5.43",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "jsonwebtoken": "^9.0.0",
+    "chart.js": "^4.3.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "cross-env": "^7.0.3"
   }
 }

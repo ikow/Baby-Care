@@ -13,6 +13,11 @@ const {
 } = require('./utils/dateUtils');
 const winston = require('winston');
 const FeedingRecord = require('./models/feeding');
+const adminRoutes = require('./routes/admin');
+const Logger = require('./utils/logger');
+const authRoutes = require('./routes/auth');
+const SettingsService = require('./services/settingsService');
+const statisticsRoutes = require('./routes/statistics');
 
 // Configure logger
 const logger = winston.createLogger({
@@ -44,9 +49,25 @@ app.use(express.json());
 // Serve static files from the public directory using absolute path
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve index.html for the root route
+// Serve HTML files for main routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/statistics', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'statistics.html'));
+});
+
+app.get('/settings', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'settings.html'));
+});
+
+app.get('/admin/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
+});
+
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Import routes
@@ -56,10 +77,13 @@ const tipsRoutes = require('./routes/tips');
 const babyRoutes = require('./routes/baby');
 
 // Route middleware
+app.use('/api/auth', authRoutes);
 app.use('/api/feeding', feedingRoutes);
 app.use('/api/diaper', diaperRoutes);
 app.use('/api/tips', tipsRoutes);
 app.use('/api/baby', babyRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 // Add health check endpoint before other routes
 app.get('/health', (req, res) => {
@@ -119,17 +143,65 @@ app.get('/api/timecheck', (req, res) => {
 // MongoDB connection with proper error handling
 async function connectDB() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/baby_care';
+    console.log('MongoDB URI:', mongoUri.replace(/mongodb:\/\/[^/]+/, 'mongodb://****'));
+    console.log('Environment:', process.env.NODE_ENV);
+
+    const options = {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 30000,
       retryWrites: true,
+      family: 4,
+      maxPoolSize: 10,
       directConnection: true,
-      family: 4
-    });
+      serverSelectionTimeoutMS: 30000,
+      heartbeatFrequencyMS: 1000,
+      minHeartbeatFrequencyMS: 100
+    };
+
+    // Clear any existing connections
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+
+    await mongoose.connect(mongoUri, options);
+
     console.log('Connected to MongoDB successfully');
+    Logger.info('Database connected successfully');
+
+    // Initialize settings
+    await SettingsService.initialize();
+    Logger.info('Settings initialized successfully');
   } catch (err) {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    Logger.error('Database connection failed', { error: err.message });
+    
+    // Wait for 5 seconds before retrying
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    return connectDB(); // Retry connection
   }
+
+  // Add connection error handlers
+  mongoose.connection.on('error', err => {
+    console.error('MongoDB connection error:', err);
+    Logger.error('Database connection error', { error: err.message });
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected');
+    Logger.warn('Database disconnected');
+    // Attempt to reconnect
+    setTimeout(() => {
+      console.log('Attempting to reconnect to MongoDB...');
+      connectDB();
+    }, 5000);
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    console.log('MongoDB reconnected');
+    Logger.info('Database reconnected');
+  });
 }
 
 // Initialize database connection
@@ -163,14 +235,17 @@ const Diaper = require('./models/diaper');
 });
 
 // Server setup with proper error handling
-const PORT = process.env.PORT || 5001;
+const PORT = parseInt(process.env.PORT || '5001', 10);
+const HOST = process.env.HOST || '0.0.0.0';
 const MAX_RETRIES = 10;
 const PORT_RANGE = 100;
 
 async function findAvailablePort(startPort) {
+    startPort = parseInt(startPort, 10);
     const net = require('net');
     
     async function isPortAvailable(port) {
+        port = parseInt(port, 10);
         return new Promise((resolve) => {
             const server = net.createServer()
                 .once('error', () => resolve(false))
@@ -178,12 +253,12 @@ async function findAvailablePort(startPort) {
                     server.close();
                     resolve(true);
                 })
-                .listen(port);
+                .listen(port, HOST);
         });
     }
 
     for (let i = 0; i < MAX_RETRIES; i++) {
-        const port = startPort + i;
+        const port = parseInt(startPort + i, 10);
         if (await isPortAvailable(port)) {
             return port;
         }
@@ -193,12 +268,12 @@ async function findAvailablePort(startPort) {
 
 async function startServer(initialPort) {
     try {
-        const port = await findAvailablePort(initialPort);
+        const port = parseInt(await findAvailablePort(initialPort), 10);
         
         return new Promise((resolve, reject) => {
-            const server = app.listen(port)
+            const server = app.listen(port, HOST)
                 .once('listening', () => {
-                    console.log(`Server is running on port ${port}`);
+                    console.log(`Server is running on http://${HOST}:${port}`);
                     console.log('Environment:', process.env.NODE_ENV);
                     if (process.env.MONGODB_URI) {
                         console.log('MongoDB URI:', process.env.MONGODB_URI.replace(/mongodb:\/\/[^/]+/, 'mongodb://****'));
@@ -267,13 +342,15 @@ async function initServer() {
     }
 }
 
-// Initialize server
+// Initialize server and export for testing
 if (require.main === module) {
-    initServer();
+    initServer().catch(err => {
+        console.error('Failed to initialize server:', err);
+        process.exit(1);
+    });
+} else {
+    module.exports = { app, initServer };
 }
-
-// Export for testing
-module.exports = { app, initServer };
 
 // Get feeding records for a specific date
 app.get('/api/feeding/baby/:babyId', async (req, res) => {

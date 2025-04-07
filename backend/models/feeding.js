@@ -4,6 +4,9 @@ const { isValidTimestamp, isFutureTimestamp } = require('../utils/dateUtils');
 
 const DEFAULT_TIMEZONE = process.env.TIMEZONE || 'America/Los_Angeles';
 
+// Define valid types as a constant to ensure consistency
+const VALID_FEEDING_TYPES = ['formula', 'breastfeeding', 'diaper', 'breast_milk_bottle', 'sleep'];
+
 const feedingSchema = new mongoose.Schema({
   babyId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -23,23 +26,23 @@ const feedingSchema = new mongoose.Schema({
     },
     get: function(date) {
       if (!date) return date;
-      // Return date in the configured timezone
-      return moment(date).tz(DEFAULT_TIMEZONE).toDate();
+      // Return date in UTC
+      return moment.utc(date).toDate();
     },
     set: function(date) {
       if (!date) return date;
-      // Store date in UTC while preserving the timezone-specific time
-      return moment.tz(date, DEFAULT_TIMEZONE).utc().toDate();
+      // Store date in UTC
+      return moment.utc(date).toDate();
     },
     index: true
   },
   type: {
     type: String,
-    enum: ['formula', 'breastfeeding', 'diaper'],
+    enum: VALID_FEEDING_TYPES,
     required: true,
     validate: {
       validator: function(v) {
-        return ['formula', 'breastfeeding', 'diaper'].includes(v);
+        return VALID_FEEDING_TYPES.includes(v);
       },
       message: props => `${props.value} is not a valid feeding type`
     }
@@ -47,27 +50,27 @@ const feedingSchema = new mongoose.Schema({
   volume: {
     type: Number,
     required: function() {
-      return this.type === 'formula';
+      return this.type === 'formula' || this.type === 'breast_milk_bottle';
     },
     min: 0,
     validate: {
       validator: function(v) {
-        return this.type !== 'formula' || v > 0;
+        return this.type !== 'formula' && this.type !== 'breast_milk_bottle' || v > 0;
       },
-      message: 'Volume must be greater than 0 for formula feeding'
+      message: 'Volume must be greater than 0 for formula feeding and breast milk bottle feeding'
     }
   },
   duration: {
     type: Number,
     required: function() {
-      return this.type === 'breastfeeding';
+      return this.type === 'breastfeeding' || this.type === 'sleep';
     },
     min: 0,
     validate: {
       validator: function(v) {
-        return this.type !== 'breastfeeding' || v > 0;
+        return (this.type !== 'breastfeeding' && this.type !== 'sleep') || v > 0;
       },
-      message: 'Duration must be greater than 0 for breastfeeding'
+      message: 'Duration must be greater than 0 for breastfeeding and sleep'
     }
   },
   diaperType: {
@@ -116,7 +119,7 @@ feedingSchema.index({ babyId: 1, timestamp: 1, isDeleted: 1 });
 feedingSchema.pre('save', function(next) {
   if (this.isModified('type')) {
     // Ensure type is one of the allowed values
-    if (!['formula', 'breastfeeding', 'diaper'].includes(this.type)) {
+    if (!VALID_FEEDING_TYPES.includes(this.type)) {
       next(new Error('Invalid feeding type'));
       return;
     }

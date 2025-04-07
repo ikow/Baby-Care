@@ -4,6 +4,7 @@ const execAsync = util.promisify(exec);
 const waitOn = require('wait-on');
 const path = require('path');
 const net = require('net');
+const { initServer } = require('../../backend/server');
 
 async function isPortInUse(port) {
     return new Promise((resolve) => {
@@ -79,25 +80,19 @@ async function globalSetup() {
     const port = await findAvailablePort(5001, 5010);
     console.log(`Using port ${port} for server`);
 
-    // Start the server
-    const serverPath = path.join(__dirname, '../../backend/server.js');
-    const serverProcess = exec(`node "${serverPath}"`, {
-        env: {
-            ...process.env,
-            NODE_ENV: 'test',
-            MONGODB_URI: 'mongodb://localhost:27017/baby_care_test',
-            PORT: port.toString()
-        }
-    });
+    // Set environment variables for the server
+    process.env.NODE_ENV = 'test';
+    process.env.MONGODB_URI = 'mongodb://localhost:27017/baby_care_test';
+    process.env.PORT = port.toString();
 
-    // Handle server output
-    serverProcess.stdout.on('data', (data) => {
-        console.log(`Server stdout: ${data}`);
-    });
-
-    serverProcess.stderr.on('data', (data) => {
-        console.error(`Server stderr: ${data}`);
-    });
+    // Initialize server
+    try {
+        await initServer();
+        console.log('Server initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize server:', error);
+        throw error;
+    }
 
     // Wait for server to be ready
     const isServerReady = await waitForServer(port);

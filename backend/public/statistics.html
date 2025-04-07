@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="nav_statistics">Baby Care Statistics</title>
+    <!-- Add this script before any other scripts or styles -->
+    <script>
+        // Immediately apply theme, language, and sidebar state before page renders
+        (function() {
+            // Hide content until everything is initialized
+            document.documentElement.style.visibility = 'hidden';
+            
+            // Apply theme
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Apply language
+            const language = localStorage.getItem('language') || 'en';
+            document.documentElement.setAttribute('lang', language);
+            
+            // Add a class to prevent transitions during page load
+            document.documentElement.classList.add('no-transitions');
+
+            // Load translations synchronously
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/js/i18n/translations.js', false); // false makes it synchronous
+            xhr.send();
+            if (xhr.status === 200) {
+                eval(xhr.responseText);
+                // Initialize i18n immediately
+                if (typeof i18n !== 'undefined') {
+                    i18n.currentLocale = language;
+                }
+            }
+            
+            // Show content after a small delay to ensure everything is ready
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    document.documentElement.classList.remove('no-transitions');
+                    document.documentElement.style.visibility = 'visible';
+                }, 50);
+            });
+        })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/i18n/translations.js"></script>
+    <!-- Add sidebar JS -->
+    <script src="/js/sidebar.js"></script>
+    <!-- Add sidebar CSS -->
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        /* Add this at the top of your styles */
+        .no-transitions * {
+            transition: none !important;
+        }
+
+        /* Theme Variables */
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1b1e;
+            --bg-secondary: #2a2b2f;
+            --bg-tertiary: #32333a;
+            --accent-primary: #64ffda;
+            --accent-secondary: #bb86fc;
+            --accent-warning: #ffb74d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --success: #00e676;
+            --danger: #ff5252;
+            --chart-grid: rgba(255, 255, 255, 0.1);
+            --chart-feeding: rgba(100, 255, 218, 0.7);
+            --chart-sleep: rgba(187, 134, 252, 0.7);
+            --chart-diaper: rgba(255, 183, 77, 0.7);
+            --chart-line: #64ffda;
+        }
+
+        :root[data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #e8e8e8;
+            --accent-primary: #00b894;
+            --accent-secondary: #6c5ce7;
+            --accent-warning: #f39c12;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: #dfe6e9;
+            --success: #00b894;
+            --danger: #d63031;
+            --chart-grid: rgba(0, 0, 0, 0.1);
+            --chart-feeding: rgba(0, 184, 148, 0.7);
+            --chart-sleep: rgba(108, 92, 231, 0.7);
+            --chart-diaper: rgba(243, 156, 18, 0.7);
+            --chart-line: #00b894;
+        }
+
+        /* Add global transition for theme changes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease,
+                      color 0.3s ease,
+                      border-color 0.3s ease,
+                      box-shadow 0.3s ease;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+            background-color: var(--bg-primary);
+            position: relative;
+            gap: 0;
+        }
+        
+        .dashboard-container.sidebar-collapsed {
+            grid-template-columns: 80px 1fr;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 100vh;
+            position: relative;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        /* Stats Container Styles */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-header {
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .chart-wrapper {
+            height: 300px;
+            position: relative;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .date-range-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            align-items: center;
+        }
+
+        .date-range-selector label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .date-range-selector input {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .date-range-selector button {
+            padding: 0.5rem 1rem;
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .date-range-selector button:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                width: 100%;
+                padding: 1rem;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 80px 1fr;
+            }
+
+            .main-content {
+                width: 100%;
+                padding: 1rem;
+            }
+
+            .sidebar-logo h2,
+            .nav-item span {
+                display: none;
+            }
+
+            .theme-switch span {
+                display: none;
+            }
+
+            .theme-switch {
+                padding: 1rem 0;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Notification styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        .alert-success {
+            background-color: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .alert-error {
+            background-color: var(--danger);
+            color: var(--bg-primary);
+        }
+
+        .alert i {
+            font-size: 1.2rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--bg-secondary);
+            padding: 2rem 1rem;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease,
+                        background-color 0.3s ease,
+                        border-color 0.3s ease;
+            position: relative;
+            width: 250px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            overflow: visible;
+            height: 100vh;
+        }
+
+        .sidebar nav {
+            flex: 1;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            height: 60px;
+            width: 100%;
+        }
+
+        .sidebar-logo i {
+            font-size: 2rem;
+            color: var(--accent-primary);
+            width: 32px;
+            text-align: center;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 1rem;
+            right: -14px;
+            background: var(--accent-primary);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1), 2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--accent-secondary);
+            transform: scale(1.1);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+        }
+
+        .sidebar.collapsed .sidebar-logo {
+            justify-content: center;
+            padding: 0 0.5rem 2rem 0.5rem;
+            width: 100%;
+        }
+
+        .sidebar.collapsed .sidebar-logo i {
+            margin: 0 auto;
+            min-width: 32px;
+        }
+
+        .sidebar.collapsed .sidebar-logo h2 {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .nav-item span {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 1;
+            transform: translateX(0);
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+            transform: translateX(-20px);
+            position: absolute;
+            left: 100%;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 1rem 0;
+            transition: padding 0.3s ease;
+            width: auto;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease,
+                        background-color 0.3s ease,
+                        color 0.3s ease;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        /* Theme Switch Button */
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+            width: calc(100% - 2rem);
+        }
+
+        .theme-switch:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .theme-switch i {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Include sidebar template -->
+        <div class="sidebar">
+            <button class="sidebar-toggle">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="sidebar-logo">
+                <i class="fas fa-baby"></i>
+                <h2 data-i18n="baby_care">Baby Care</h2>
+            </div>
+            <nav>
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span data-i18n="nav_dashboard">Dashboard</span>
+                </a>
+                <a href="statistics.html" class="nav-item active">
+                    <i class="fas fa-chart-bar"></i>
+                    <span data-i18n="nav_statistics">Statistics</span>
+                </a>
+                <a href="sleep-pattern.html" class="nav-item">
+                    <i class="fas fa-moon"></i>
+                    <span data-i18n="nav_sleep_pattern">Sleep Pattern</span>
+                </a>
+                <a href="body-data.html" class="nav-item">
+                    <i class="fas fa-weight"></i>
+                    <span data-i18n="nav_body_data">Body Data</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span data-i18n="nav_settings">Settings</span>
+                </a>
+            </nav>
+            <!-- Theme Switch Button -->
+            <div class="theme-switch">
+                <i class="fas fa-moon"></i>
+                <span data-i18n="dark_mode">Dark Mode</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="date-range-selector">
+                <div>
+                    <label for="startDate" data-i18n="start_date">Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div>
+                    <label for="endDate" data-i18n="end_date">End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+                <button onclick="updateStatistics()" data-i18n="update">Update</button>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="totalFeedings">0</div>
+                        <div class="summary-label" data-i18n="total_feedings">Total Feedings</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="latestVolume">0</div>
+                        <div class="summary-label" data-i18n="latest_daily_volume">Latest Daily Volume (ml)</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="totalDiapers">0</div>
+                        <div class="summary-label" data-i18n="total_diapers">Total Diapers</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="avgFeedings">0</div>
+                        <div class="summary-label" data-i18n="avg_feedings_per_day">Avg Feedings/Day</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title" data-i18n="feeding_patterns">Feeding Patterns</h3>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="feedingPatternChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title" data-i18n="daily_volumes">Daily Volumes</h3>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="volumeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title" data-i18n="diaper_changes_pee">Diaper Changes - Pee</h3>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="diaperPeeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title" data-i18n="diaper_changes_poo">Diaper Changes - Poo</h3>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="diaperPooChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add timezone constant
+        const TIME_ZONE = 'America/Los_Angeles';
+
+        // Add charts object to hold references to all chart instances
+        const charts = {};
+        let feedingPatternChart, volumeChart, diaperPeeChart, diaperPooChart;
+        
+        // Define chart options globally
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return Math.round(value);
+                        }
+                    },
+                    afterDataLimits: (scale) => {
+                        const max = scale.max;
+                        // Calculate appropriate step size based on data range
+                        if (max <= 10) {
+                            scale.options.ticks.stepSize = 1;
+                        } else if (max <= 50) {
+                            scale.options.ticks.stepSize = 5;
+                        } else if (max <= 100) {
+                            scale.options.ticks.stepSize = 10;
+                        } else {
+                            scale.options.ticks.stepSize = Math.ceil(max / 20);
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Function to create chart options with custom Y axis settings
+        function createChartOptions(customOptions = {}) {
+            return {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        ...chartOptions.scales.y,
+                        ...customOptions
+                    }
+                }
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('Initializing statistics page...');
+                
+                // Initialize i18n
+                i18n.init();
+                
+                // Initialize theme
+                initializeTheme();
+                
+                // Initialize sidebar
+                initializeSidebar();
+                
+                // 添加侧边栏切换按钮事件处理
+                const toggleBtn = document.querySelector('.sidebar-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        toggleSidebar(e);
+                    });
+                }
+                
+                // Set up date range controls
+                setupDateRange();
+                
+                // Set up other event listeners
+                setupEventListeners();
+                
+                // Load initial statistics
+                await loadStatistics();
+                
+                // Show the page
+                document.documentElement.classList.remove('no-transitions');
+                document.documentElement.style.visibility = 'visible';
+                
+                console.log('Page initialization complete');
+            } catch (error) {
+                console.error('Failed to initialize page:', error);
+                showNotification('Failed to initialize page: ' + error.message, 'error');
+                // Show the page even if there's an error
+                document.documentElement.style.visibility = 'visible';
+            }
+        });
+
+        // Function to load initial statistics
+        async function loadStatistics() {
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+
+                if (!startDate || !endDate) {
+                    showNotification(i18n.t('please_select_date_range'), 'error');
+                    return;
+                }
+
+                const response = await fetch(`/api/statistics?startDate=${startDate}&endDate=${endDate}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Initialize charts with the data
+                initializeCharts(data);
+                // Update summary cards
+                updateSummaryCards(data);
+                
+                console.log('Initial statistics loaded successfully');
+            } catch (error) {
+                console.error('Failed to load initial statistics:', error);
+                showNotification(i18n.t('failed_to_fetch_statistics') + ': ' + error.message, 'error');
+            }
+        }
+
+        // Function to set up event listeners
+        function setupEventListeners() {
+            try {
+                console.log('Setting up event listeners...');
+                
+                // Add event listener for theme changes
+                window.addEventListener('themechange', () => {
+                    updateChartsTheme();
+                });
+
+                // Add event listeners for date inputs
+                const startDateInput = document.getElementById('startDate');
+                const endDateInput = document.getElementById('endDate');
+
+                startDateInput.addEventListener('change', () => {
+                    const endDate = new Date(endDateInput.value);
+                    const startDate = new Date(startDateInput.value);
+                    if (startDate > endDate) {
+                        endDateInput.value = startDateInput.value;
+                    }
+                });
+
+                endDateInput.addEventListener('change', () => {
+                    const endDate = new Date(endDateInput.value);
+                    const startDate = new Date(startDateInput.value);
+                    if (endDate < startDate) {
+                        startDateInput.value = endDateInput.value;
+                    }
+                });
+
+                console.log('Event listeners set up successfully');
+            } catch (error) {
+                console.error('Failed to set up event listeners:', error);
+                showNotification('Failed to set up event listeners: ' + error.message, 'error');
+            }
+        }
+
+        function setupDateRange() {
+            // Get current date in configured timezone
+            const now = new Date().toLocaleString('en-US', { timeZone: TIME_ZONE });
+            const today = new Date(now);
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            // Format dates in YYYY-MM-DD format
+            document.getElementById('startDate').value = thirtyDaysAgo.toLocaleDateString('en-CA');
+            document.getElementById('endDate').value = today.toLocaleDateString('en-CA');
+            
+            // Log the date setup for debugging
+            console.log('Date range setup:', {
+                timezone: TIME_ZONE,
+                today: today.toISOString(),
+                thirtyDaysAgo: thirtyDaysAgo.toISOString(),
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value
+            });
+        }
+
+        function initializeCharts(data) {
+            try {
+                console.log('Initializing charts...');
+                
+                // Initialize feeding pattern chart
+                feedingPatternChart = new Chart(document.getElementById('feedingPatternChart'), {
+                    type: 'line',
+                    data: {
+                        labels: data.feedingPatterns.labels,
+                        datasets: [{
+                            label: i18n.t('feedings'),
+                            data: data.feedingPatterns.values,
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary'),
+                            fill: false
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // Initialize volume chart
+                volumeChart = new Chart(document.getElementById('volumeChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.dailyVolumes.labels,
+                        datasets: [{
+                            label: 'ml',
+                            data: data.dailyVolumes.values,
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary')
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // Initialize diaper pee chart
+                diaperPeeChart = new Chart(document.getElementById('diaperPeeChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.diaperChanges.labels,
+                        datasets: [{
+                            label: i18n.t('diaper_changes_pee'),
+                            data: data.diaperChanges.pee,
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-warning'),
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-warning'),
+                            borderWidth: 1,
+                            barPercentage: 0.8,
+                            categoryPercentage: 0.9
+                        }]
+                    },
+                    options: createChartOptions({
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        }
+                    })
+                });
+
+                // Initialize diaper poo chart
+                diaperPooChart = new Chart(document.getElementById('diaperPooChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.diaperChanges.labels,
+                        datasets: [{
+                            label: i18n.t('diaper_changes_poo'),
+                            data: data.diaperChanges.poo,
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--danger'),
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--danger'),
+                            borderWidth: 1,
+                            barPercentage: 0.8,
+                            categoryPercentage: 0.9
+                        }]
+                    },
+                    options: createChartOptions({
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        }
+                    })
+                });
+
+                charts.feedingPattern = feedingPatternChart;
+                charts.volume = volumeChart;
+                charts.diaperPee = diaperPeeChart;
+                charts.diaperPoo = diaperPooChart;
+
+                console.log('Charts initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize charts:', error);
+                showNotification('Failed to initialize charts: ' + error.message, 'error');
+            }
+        }
+
+        async function updateStatistics() {
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+
+                if (!startDate || !endDate) {
+                    throw new Error(i18n.t('please_select_date_range'));
+                }
+
+                console.log('Fetching statistics for date range:', { startDate, endDate });
+                const response = await fetch(`/api/statistics?startDate=${startDate}&endDate=${endDate}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    throw new Error(i18n.t('failed_to_fetch_statistics'));
+                }
+
+                const data = await response.json();
+                console.log('Statistics data:', data);
+                
+                // Initialize empty diaper changes data if not present
+                if (!data.diaperChanges) {
+                    data.diaperChanges = {
+                        labels: [],
+                        pee: [],
+                        poo: []
+                    };
+                }
+                
+                // Ensure arrays exist and are not null
+                data.diaperChanges.labels = data.diaperChanges.labels || [];
+                data.diaperChanges.pee = data.diaperChanges.pee || [];
+                data.diaperChanges.poo = data.diaperChanges.poo || [];
+                
+                console.log('Diaper changes data:', data.diaperChanges);
+                updateSummaryCards(data);
+                updateCharts(data);
+                
+                showNotification(i18n.t('statistics_updated'), 'success');
+            } catch (error) {
+                console.error('Failed to update statistics:', error);
+                showNotification(i18n.t('error_updating_statistics') + ': ' + error.message, 'error');
+            }
+        }
+
+        function updateSummaryCards(data) {
+            try {
+                console.log('Updating summary cards with raw data:', {
+                    totalFeedings: data.totalFeedings,
+                    latestDailyVolume: data.latestDailyVolume,
+                    totalDiapers: data.totalDiapers,
+                    averageFeedingsPerDay: data.averageFeedingsPerDay
+                });
+                
+                const latestVolume = data.latestDailyVolume ? Math.round(data.latestDailyVolume) : 0;
+                console.log('Calculated latest volume:', {
+                    raw: data.latestDailyVolume,
+                    rounded: latestVolume,
+                    isNumber: typeof data.latestDailyVolume === 'number',
+                    isNull: data.latestDailyVolume === null,
+                    isUndefined: data.latestDailyVolume === undefined
+                });
+                
+                document.getElementById('totalFeedings').textContent = data.totalFeedings || 0;
+                document.getElementById('latestVolume').textContent = latestVolume;
+                document.getElementById('totalDiapers').textContent = data.totalDiapers || 0;
+                document.getElementById('avgFeedings').textContent = data.averageFeedingsPerDay ? (Math.round(data.averageFeedingsPerDay * 10) / 10) : 0;
+
+                console.log('Updated summary card values:', {
+                    totalFeedings: document.getElementById('totalFeedings').textContent,
+                    latestVolume: document.getElementById('latestVolume').textContent,
+                    totalDiapers: document.getElementById('totalDiapers').textContent,
+                    avgFeedings: document.getElementById('avgFeedings').textContent
+                });
+            } catch (error) {
+                console.error('Failed to update summary cards:', error);
+                showNotification('Failed to update summary cards: ' + error.message, 'error');
+            }
+        }
+
+        function updateCharts(data) {
+            try {
+                console.log('Updating charts with data:', data);
+                
+                // Update feeding pattern chart if data exists
+                if (data.feedingPatterns && data.feedingPatterns.labels && data.feedingPatterns.values) {
+                    console.log('Updating feeding pattern chart with:', {
+                        labels: data.feedingPatterns.labels,
+                        data: data.feedingPatterns.values
+                    });
+                    feedingPatternChart.data.labels = data.feedingPatterns.labels;
+                    feedingPatternChart.data.datasets[0].data = data.feedingPatterns.values;
+                    feedingPatternChart.update();
+                }
+
+                // Update volume chart if data exists
+                if (data.dailyVolumes && data.dailyVolumes.labels && data.dailyVolumes.values) {
+                    console.log('Updating volume chart with:', {
+                        labels: data.dailyVolumes.labels,
+                        data: data.dailyVolumes.values
+                    });
+                    volumeChart.data.labels = data.dailyVolumes.labels;
+                    volumeChart.data.datasets[0].data = data.dailyVolumes.values;
+                    volumeChart.update();
+                }
+
+                // Update diaper pee chart
+                if (data.diaperChanges && Array.isArray(data.diaperChanges.labels) && Array.isArray(data.diaperChanges.pee)) {
+                    console.log('Updating diaper pee chart with:', {
+                        labels: data.diaperChanges.labels,
+                        data: data.diaperChanges.pee
+                    });
+                    
+                    diaperPeeChart.data.labels = data.diaperChanges.labels;
+                    diaperPeeChart.data.datasets[0].data = data.diaperChanges.pee;
+                    diaperPeeChart.update('none'); // Use 'none' mode for better performance
+                }
+
+                // Update diaper poo chart
+                if (data.diaperChanges && Array.isArray(data.diaperChanges.labels) && Array.isArray(data.diaperChanges.poo)) {
+                    console.log('Updating diaper poo chart with:', {
+                        labels: data.diaperChanges.labels,
+                        data: data.diaperChanges.poo
+                    });
+                    
+                    diaperPooChart.data.labels = data.diaperChanges.labels;
+                    diaperPooChart.data.datasets[0].data = data.diaperChanges.poo;
+                    diaperPooChart.update('none'); // Use 'none' mode for better performance
+                }
+
+                console.log('Charts updated successfully');
+            } catch (error) {
+                console.error('Failed to update charts:', error);
+                showNotification('Failed to update charts: ' + error.message, 'error');
+            }
+        }
+
+        function initializeTheme() {
+            try {
+                console.log('Initializing theme...');
+                const savedTheme = localStorage.getItem('theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateThemeIcon();
+                console.log('Theme initialized successfully:', savedTheme);
+            } catch (error) {
+                console.error('Failed to initialize theme:', error);
+                showNotification('Failed to initialize theme: ' + error.message, 'error');
+            }
+        }
+
+        function toggleTheme() {
+            try {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon();
+                updateChartsTheme();
+                showNotification(i18n.t('theme_changed'), 'success');
+                console.log('Theme toggled successfully:', newTheme);
+            } catch (error) {
+                console.error('Failed to toggle theme:', error);
+                showNotification('Failed to toggle theme: ' + error.message, 'error');
+            }
+        }
+
+        function toggleSidebar(event) {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                sidebar.classList.toggle('collapsed');
+                dashboardContainer.classList.toggle('sidebar-collapsed');
+                
+                // Update button icon based on sidebar state
+                const toggleBtn = document.querySelector('.sidebar-toggle i');
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.className = 'fas fa-chevron-right';
+                } else {
+                    toggleBtn.className = 'fas fa-chevron-left';
+                }
+                
+                // Save sidebar state to localStorage - 兼容两种键名
+                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                
+                // 阻止事件冒泡和默认行为
+                if (event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+                
+                console.log('Sidebar toggled successfully:', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to toggle sidebar:', error);
+                showNotification('Failed to toggle sidebar: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize sidebar state
+        function initializeSidebar() {
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                
+                // 支持两种localStorage键名
+                let isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                // 如果新键名存在，优先使用新键名的值
+                if (localStorage.getItem('sidebarCollapsed') !== null) {
+                    isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                }
+                
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    dashboardContainer.classList.add('sidebar-collapsed');
+                    // Update button icon
+                    const toggleBtn = document.querySelector('.sidebar-toggle i');
+                    if (toggleBtn) {
+                        toggleBtn.className = 'fas fa-chevron-right';
+                    }
+                }
+                
+                console.log('Sidebar initialized successfully:', isCollapsed ? 'collapsed' : 'expanded');
+            } catch (error) {
+                console.error('Failed to initialize sidebar:', error);
+                showNotification('Failed to initialize sidebar: ' + error.message, 'error');
+            }
+        }
+
+        function updateThemeIcon() {
+            try {
+                const themeIcon = document.querySelector('.theme-switch i');
+                const themeText = document.querySelector('.theme-switch span');
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                
+                if (currentTheme === 'dark') {
+                    themeIcon.className = 'fas fa-moon';
+                    themeText.textContent = i18n.t('dark_mode');
+                } else {
+                    themeIcon.className = 'fas fa-sun';
+                    themeText.textContent = i18n.t('light_mode');
+                }
+                console.log('Theme icon updated successfully:', currentTheme);
+            } catch (error) {
+                console.error('Failed to update theme icon:', error);
+                showNotification('Failed to update theme icon: ' + error.message, 'error');
+            }
+        }
+
+        function updateChartsTheme() {
+            try {
+                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
+                Object.values(charts).forEach(chart => {
+                    if (chart.options.plugins.legend) {
+                        chart.options.plugins.legend.labels.color = textColor;
+                    }
+                    chart.update();
+                });
+                console.log('Charts theme updated successfully');
+            } catch (error) {
+                console.error('Failed to update charts theme:', error);
+                showNotification('Failed to update charts theme: ' + error.message, 'error');
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            try {
+                console.log('Showing notification:', { message, type });
+                
+                let container = document.querySelector('.notification-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.className = 'notification-container';
+                    document.body.appendChild(container);
+                }
+
+                const notification = document.createElement('div');
+                notification.className = `alert alert-${type}`;
+                notification.innerHTML = `
+                    <span>${message}</span>
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                `;
+                
+                container.appendChild(notification);
+                
+                setTimeout(() => {
+                    try {
+                        notification.style.animation = 'fadeOut 0.3s ease-out forwards';
+                        setTimeout(() => {
+                            try {
+                                notification.remove();
+                                if (container.children.length === 0) {
+                                    container.remove();
+                                }
+                            } catch (error) {
+                                console.error('Failed to remove notification:', error);
+                            }
+                        }, 300);
+                    } catch (error) {
+                        console.error('Failed to fade out notification:', error);
+                    }
+                }, 3000);
+
+                console.log('Notification shown successfully');
+            } catch (error) {
+                console.error('Failed to show notification:', error);
+                // Don't show another notification here to avoid potential infinite loop
+            }
+        }
+    </script>
+</body>
+</html> 

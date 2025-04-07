@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${DOCKER_USERNAME}/babycare-app:latest
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/baby-tracker
+      - PORT=5001
+      - JWT_SECRET=${JWT_SECRET:-your_production_secret_key}
+      - TIMEZONE=America/Los_Angeles
+      - HOST=0.0.0.0
+    volumes:
+      - baby_care_app_data:/usr/src/app/data
+    depends_on:
+      - mongodb
+    restart: always
+    networks:
+      - baby-care-network
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - baby_care_mongodb_data:/data/db
+    restart: always
+    networks:
+      baby-care-network:
+        aliases:
+          - mongo
+          - mongodb
+    command: mongod --bind_ip_all
+
+  mongo-express:
+    image: mongo-express:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_USERNAME:-admin}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_PASSWORD:-admin123}
+    depends_on:
+      - mongodb
+    restart: always
+    networks:
+      - baby-care-network
+
+networks:
+  baby-care-network:
+    driver: bridge
+
+volumes:
+  baby_care_mongodb_data:
+    driver: local
+  baby_care_app_data:
+    driver: local 
