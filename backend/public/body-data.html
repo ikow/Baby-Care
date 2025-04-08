@@ -911,6 +911,10 @@
                                 <label for="heightInput" data-i18n="height_cm">身高 (cm)</label>
                                 <input type="number" id="heightInput" class="form-control" step="0.1" min="0" max="150">
                             </div>
+                            <div class="form-group">
+                                <label for="notesInput" data-i18n="notes">备注</label>
+                                <textarea id="notesInput" class="form-control" rows="3"></textarea>
+                            </div>
                             <button id="saveDataBtn" class="btn btn-primary" data-i18n="save_data">保存数据</button>
                         </div>
                     </div>
@@ -927,6 +931,7 @@
                                             <th data-i18n="date">日期</th>
                                             <th data-i18n="weight_kg">体重 (kg)</th>
                                             <th data-i18n="height_cm">身高 (cm)</th>
+                                            <th data-i18n="notes">备注</th>
                                             <th data-i18n="actions">操作</th>
                                         </tr>
                                     </thead>
@@ -1312,9 +1317,34 @@
         // Fetch data from API
         async function fetchData() {
             try {
-                // 从localStorage加载已保存的数据
-                const savedData = localStorage.getItem('bodyData');
-                sampleData = savedData ? JSON.parse(savedData) : [];
+                // Get the active baby ID from localStorage or set default if not exists
+                let activeBabyId = localStorage.getItem('activeBabyId');
+                
+                if (!activeBabyId) {
+                    activeBabyId = getOrSetDefaultBabyId();
+                    if (!activeBabyId) {
+                        console.error('无法获取默认宝宝ID');
+                        return [];
+                    }
+                }
+                
+                // Fetch data from API
+                const response = await fetch(`/api/bodyData/baby/${activeBabyId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Transform API data to match expected format
+                sampleData = data.map(item => ({
+                    id: item._id,
+                    date: item.date,
+                    weight: item.weight,
+                    height: item.height,
+                    notes: item.notes
+                }));
                 
                 // Load data into table
                 loadBodyDataTable(sampleData);
@@ -1325,7 +1355,22 @@
                 return sampleData;
             } catch (error) {
                 console.error('Error fetching data:', error);
-                return [];
+                // Fall back to localStorage if API fails
+                try {
+                    const savedData = localStorage.getItem('bodyData');
+                    const localData = savedData ? JSON.parse(savedData) : [];
+                    
+                    // Load data into table
+                    loadBodyDataTable(localData);
+                    
+                    // Update charts
+                    updateCharts(getSelectedRange());
+                    
+                    return localData;
+                } catch (localError) {
+                    console.error('Error loading local data:', localError);
+                    return [];
+                }
             }
         }
         
@@ -1339,7 +1384,7 @@
                 
                 if (!data || data.length === 0) {
                     const emptyRow = document.createElement('tr');
-                    emptyRow.innerHTML = `<td colspan="4" class="text-center">${typeof i18n !== 'undefined' ? i18n.t('no_data') : '无数据'}</td>`;
+                    emptyRow.innerHTML = `<td colspan="5" class="text-center">${typeof i18n !== 'undefined' ? i18n.t('no_data') : '无数据'}</td>`;
                     bodyDataTable.appendChild(emptyRow);
                     return;
                 }
@@ -1353,11 +1398,13 @@
                     // Format weight and height, showing dash for missing values
                     const weightDisplay = item.weight !== null && item.weight !== undefined ? item.weight : '—';
                     const heightDisplay = item.height !== null && item.height !== undefined ? item.height : '—';
+                    const notesDisplay = item.notes ? item.notes : '—';
                     
                     row.innerHTML = `
                         <td>${formattedDate}</td>
                         <td>${weightDisplay}</td>
                         <td>${heightDisplay}</td>
+                        <td>${notesDisplay}</td>
                         <td>
                             <button class="btn-edit" data-id="${item.id}" title="${typeof i18n !== 'undefined' ? i18n.t('edit') : '编辑'}">
                                 <i class="fas fa-edit"></i>
@@ -1737,70 +1784,96 @@
         }
         
         // Save data
-        function saveData() {
+        async function saveData() {
             try {
+                // Get form values
                 const recordDate = document.getElementById('recordDate').value;
-                const weightInput = document.getElementById('weightInput');
-                const heightInput = document.getElementById('heightInput');
-                const weight = weightInput.value ? parseFloat(weightInput.value) : null;
-                const height = heightInput.value ? parseFloat(heightInput.value) : null;
+                let weight = document.getElementById('weightInput').value;
+                let height = document.getElementById('heightInput').value;
+                const notes = document.getElementById('notesInput')?.value || '';
                 
-                // Validate inputs - at least one of weight or height must be provided
-                if (!recordDate || (weight === null && height === null) || 
-                    (weight !== null && isNaN(weight)) || 
-                    (height !== null && isNaN(height))) {
-                    const errorMessage = typeof i18n !== 'undefined' ? 
-                        i18n.t('please_fill_date_and_at_least_one_measurement') : 
-                        '请填写日期和至少一项测量值（体重或身高）';
-                    alert(errorMessage);
+                // 转换为数字或设为null
+                weight = weight ? parseFloat(weight) : null;
+                height = height ? parseFloat(height) : null;
+                
+                // 验证日期和至少一项测量值（体重或身高）
+                if (!recordDate) {
+                    alert(typeof i18n !== 'undefined' ? i18n.t('please_fill_date') : '请填写日期');
                     return;
                 }
+                
+                if (weight === null && height === null) {
+                    alert(typeof i18n !== 'undefined' ? i18n.t('please_fill_at_least_one_measurement') : '请至少填写一项测量值（体重或身高）');
+                    return;
+                }
+                
+                // 获取活跃宝宝ID（总是使用默认ID）
+                const activeBabyId = localStorage.getItem('activeBabyId');
                 
                 const saveDataBtn = document.getElementById('saveDataBtn');
                 const mode = saveDataBtn.getAttribute('data-mode') || 'add';
                 
                 if (mode === 'edit') {
                     const id = saveDataBtn.getAttribute('data-id');
-                    // In a real app, you would call an API to update the data
-                    console.log(`Updating record with ID: ${id}`);
+                    // Call API to update data
+                    const response = await fetch(`/api/bodyData/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            date: recordDate,
+                            weight,
+                            height,
+                            notes
+                        })
+                    });
                     
-                    // For demo purposes, update the item in the sample data
-                    const itemIndex = sampleData.findIndex(d => d.id == id);
-                    if (itemIndex !== -1) {
-                        // Keep existing values if not provided
-                        if (weight === null) {
-                            weight = sampleData[itemIndex].weight;
-                        }
-                        if (height === null) {
-                            height = sampleData[itemIndex].height;
-                        }
-                        sampleData[itemIndex] = { id: parseInt(id), date: recordDate, weight, height };
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
                     }
-                } else {
-                    // In a real app, you would call an API to save the data
-                    console.log('Saving new record');
                     
-                    // For demo purposes, add to sample data
-                    const newId = sampleData.length > 0 ? Math.max(...sampleData.map(d => d.id)) + 1 : 1;
-                    sampleData.push({ id: newId, date: recordDate, weight, height });
+                    const updatedData = await response.json();
+                    console.log('Record updated:', updatedData);
+                } else {
+                    // Call API to save new data
+                    const response = await fetch('/api/bodyData', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            babyId: activeBabyId,
+                            date: recordDate,
+                            weight,
+                            height,
+                            notes
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    
+                    const savedData = await response.json();
+                    console.log('New record saved:', savedData);
                 }
                 
                 // Reset form
                 document.getElementById('recordDate').value = '';
                 document.getElementById('weightInput').value = '';
                 document.getElementById('heightInput').value = '';
+                if (document.getElementById('notesInput')) {
+                    document.getElementById('notesInput').value = '';
+                }
                 
                 // Reset save button
                 saveDataBtn.textContent = typeof i18n !== 'undefined' ? i18n.t('save_data') : '保存数据';
                 saveDataBtn.removeAttribute('data-mode');
                 saveDataBtn.removeAttribute('data-id');
                 
-                // Reload table and update charts
-                loadBodyDataTable(sampleData);
-                updateCharts(getSelectedRange());
-                
-                // 保存数据到localStorage
-                localStorage.setItem('bodyData', JSON.stringify(sampleData));
+                // Reload data from API
+                await fetchData();
                 
                 // Show success notification
                 const dataSavedMessage = typeof i18n !== 'undefined' ? i18n.t('data_saved') : '数据保存成功';
@@ -1819,9 +1892,12 @@
                 if (!item) return;
                 
                 // Fill the form with the data
-                document.getElementById('recordDate').value = item.date;
-                document.getElementById('weightInput').value = item.weight;
-                document.getElementById('heightInput').value = item.height;
+                document.getElementById('recordDate').value = new Date(item.date).toISOString().split('T')[0];
+                document.getElementById('weightInput').value = item.weight || '';
+                document.getElementById('heightInput').value = item.height || '';
+                if (document.getElementById('notesInput')) {
+                    document.getElementById('notesInput').value = item.notes || '';
+                }
                 
                 // Change save button to update
                 const saveDataBtn = document.getElementById('saveDataBtn');
@@ -1837,25 +1913,25 @@
         }
         
         // Delete body data
-        function deleteBodyData(id) {
+        async function deleteBodyData(id) {
             try {
                 // Use i18n translated confirmation message
                 const confirmMessage = typeof i18n !== 'undefined' ? i18n.t('confirm_delete') : '确定要删除这条记录吗?';
                 
                 if (confirm(confirmMessage)) {
-                    // In a real app, you would call an API to delete the data
-                    console.log(`Deleting record with ID: ${id}`);
+                    // Call API to delete the data
+                    const response = await fetch(`/api/bodyData/${id}`, {
+                        method: 'DELETE'
+                    });
                     
-                    // For demo purposes, filter out the deleted item
-                    const newData = sampleData.filter(d => d.id != id);
-                    sampleData = newData;
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
                     
-                    // Update table and charts
-                    loadBodyDataTable(newData);
-                    updateCharts(getSelectedRange());
+                    console.log(`Deleted record with ID: ${id}`);
                     
-                    // 更新localStorage
-                    localStorage.setItem('bodyData', JSON.stringify(sampleData));
+                    // Reload data from API
+                    await fetchData();
                     
                     // Show success notification
                     const deleteMessage = typeof i18n !== 'undefined' ? i18n.t('data_deleted') : '数据已删除';
@@ -1935,6 +2011,20 @@
             }
         }
         
+        // Get or set default baby ID
+        function getOrSetDefaultBabyId() {
+            try {
+                // 设置默认的宝宝ID - 这样我们就不需要选择宝宝了
+                const defaultBabyId = '67f49466fca710443c852a4a'; // 使用我们刚创建的宝宝ID
+                localStorage.setItem('activeBabyId', defaultBabyId);
+                console.log('Set default baby ID:', defaultBabyId);
+                return defaultBabyId;
+            } catch (error) {
+                console.error('Error setting default baby ID:', error);
+                return null;
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize DOM element references
             const sidebarToggle = document.querySelector('.sidebar-toggle');
@@ -1976,6 +2066,9 @@
             
             // Load baby information from localStorage
             loadBabyInfo();
+            
+            // Get or set the default baby ID
+            getOrSetDefaultBabyId();
             
             // Load data from the API
             fetchData();

@@ -5,6 +5,11 @@ const mongoose = require('mongoose');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const bodyDataRoutes = require('./routes/bodyData');
+const feedingRoutes = require('./routes/feeding');
+const diaperRoutes = require('./routes/diaper');
+const statisticsRoutes = require('./routes/statistics');
+const tipsRoutes = require('./routes/tips');
+const babyRoutes = require('./routes/baby');
 require('dotenv').config();
 
 const app = express();

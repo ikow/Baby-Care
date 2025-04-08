@@ -18,6 +18,7 @@ const Logger = require('./utils/logger');
 const authRoutes = require('./routes/auth');
 const SettingsService = require('./services/settingsService');
 const statisticsRoutes = require('./routes/statistics');
+const bodyDataRoutes = require('./routes/bodyData');
 
 // Configure logger
 const logger = winston.createLogger({
@@ -84,6 +85,7 @@ app.use('/api/tips', tipsRoutes);
 app.use('/api/baby', babyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/bodyData', bodyDataRoutes);
 
 // Add health check endpoint before other routes
 app.get('/health', (req, res) => {

@@ -35,16 +35,16 @@ router.post('/', isAuthenticated, async (req, res) => {
     try {
         const { babyId, date, weight, height, notes } = req.body;
         
-        if (!babyId || !date || weight === undefined || height === undefined) {
-            return res.status(400).json({ error: 'Missing required fields' });
+        if (!babyId || !date || (weight === undefined && height === undefined)) {
+            return res.status(400).json({ error: '缺少必要字段，必须提供日期和至少一项测量值（体重或身高）' });
         }
         
         // Create new body data record
         const newBodyData = new BodyData({
             babyId,
             date: new Date(date),
-            weight,
-            height,
+            weight: weight !== undefined ? weight : undefined,
+            height: height !== undefined ? height : undefined,
             notes: notes || ''
         });
         

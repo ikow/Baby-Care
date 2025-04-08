@@ -19,6 +19,16 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get all babies
+router.get('/', async (req, res) => {
+  try {
+    const babies = await Baby.find();
+    res.json(babies);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get baby by ID
 router.get('/:id', async (req, res) => {
   try {
