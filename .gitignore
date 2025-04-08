@@ -27,4 +27,32 @@ coverage/
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Large files and backups
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.backup
+*.bak
+*.sql
+*.dump
+backend/backups/
+*.tar.xz
+baby-care-*.tar
+baby-care-*.tar.gz
+baby-care-image.tar
+baby-care-amd64.tar
+baby-care-update.tar.gz
+backend.zip
+
+# Test-related files
+test-results/
+playwright-report/
+
+# OS-specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini 
